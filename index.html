@@ -14,6 +14,48 @@
 
   <div class="controls" id="controls"></div>
 
+  <details class="advanced-panel" id="advancedPanel">
+    <summary>⚙️ Advanced Parameters</summary>
+    <div class="advanced-grid">
+      <fieldset>
+        <legend>Competition</legend>
+        <div class="adv-row"><label>Duration (min)</label><input type="number" id="p_compDuration" value="180" min="30" max="480"></div>
+        <div class="adv-row"><label># of Routes</label><input type="number" id="p_numRoutes" value="37" min="5" max="100"></div>
+        <div class="adv-row"><label>Max Attempts</label><input type="number" id="p_maxAttempts" value="2" min="1" max="5"></div>
+        <div class="adv-row"><label>Retry Penalty (%)</label><input type="number" id="p_retryPenalty" value="10" min="0" max="100" step="5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Time per Route (min)</legend>
+        <div class="adv-row"><label>Climb Time (easy)</label><input type="number" id="p_climbTimeMin" value="3" min="1" max="15" step="0.5"></div>
+        <div class="adv-row"><label>Climb Time (hard)</label><input type="number" id="p_climbTimeMax" value="8" min="2" max="30" step="0.5"></div>
+        <div class="adv-row"><label>Rest Time (easy)</label><input type="number" id="p_restTimeMin" value="3" min="0" max="15" step="0.5"></div>
+        <div class="adv-row"><label>Rest Time (hard)</label><input type="number" id="p_restTimeMax" value="12" min="2" max="30" step="0.5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Fatigue Curve</legend>
+        <div class="adv-row"><label>Warmup Ends (min)</label><input type="number" id="p_warmupEnd" value="30" min="5" max="60"></div>
+        <div class="adv-row"><label>Ramp Ends (min)</label><input type="number" id="p_rampEnd" value="90" min="30" max="150"></div>
+        <div class="adv-row"><label>Peak Ends (min)</label><input type="number" id="p_peakEnd" value="120" min="60" max="180"></div>
+        <div class="adv-row"><label>Warmup Floor (%)</label><input type="number" id="p_warmupFloor" value="55" min="20" max="90" step="5"></div>
+        <div class="adv-row"><label>Warmup Ceil (%)</label><input type="number" id="p_warmupCeil" value="85" min="50" max="99" step="5"></div>
+        <div class="adv-row"><label>Fatigue Decay Rate</label><input type="number" id="p_fatigueDecay" value="0.003" min="0" max="0.02" step="0.001"></div>
+        <div class="adv-row"><label>Perf→Grade Range</label><input type="number" id="p_perfToGradeRange" value="10" min="3" max="20" step="1"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Failure Model</legend>
+        <div class="adv-row"><label>Sigmoid Steepness</label><input type="number" id="p_failSigmoidK" value="1.8" min="0.5" max="5" step="0.1"></div>
+        <div class="adv-row"><label>Sigmoid Offset</label><input type="number" id="p_failSigmoidOffset" value="0.5" min="-2" max="3" step="0.1"></div>
+        <div class="adv-row"><label>Hard Ceiling (grades above)</label><input type="number" id="p_failCeiling" value="1.5" min="0.5" max="5" step="0.5"></div>
+        <div class="adv-row"><label>Retry Benefit Threshold</label><input type="number" id="p_retryBenefitThreshold" value="2" min="0" max="5" step="0.5"></div>
+        <div class="adv-row"><label>Retry Fail Reduction</label><input type="number" id="p_retryFailReduction" value="0.6" min="0.1" max="1" step="0.05"></div>
+      </fieldset>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button onclick="applyAdvanced()">Apply</button>
+      <button onclick="resetAdvanced()" style="background:#666;">Reset Defaults</button>
+    </div>
+  </details>
+
   <div class="charts">
     <div class="chart-card"><h3>Route Distribution</h3><canvas id="chartDist"></canvas></div>
     <div class="chart-card"><h3>Time &amp; Rest Model</h3><canvas id="chartTime"></canvas></div>
@@ -24,6 +66,75 @@
   <div class="strategy-output" id="strategyOutput">
     <h2>Optimized Strategy</h2>
     <p style="color:#666; margin-top:8px;">Configure inputs above and click <strong>Optimize</strong></p>
+  </div>
+
+  <!-- Live Competition Mode -->
+  <div class="live-section" id="liveSection">
+    <h2>🏁 Live Competition Mode</h2>
+
+    <div class="live-setup" id="liveSetup">
+      <div class="control-group">
+        <label for="compEndTime">Competition End Time</label>
+        <input type="time" id="compEndTime" value="17:00">
+      </div>
+      <button id="btnStartComp" onclick="startCompetition()">Start Competition</button>
+      <button id="btnResumeComp" onclick="resumeCompetition()" style="display:none; background:#5cb85c;">Resume Saved Comp</button>
+      <button id="btnResetComp" onclick="resetCompetition()" style="display:none; background:#d9534f;">Reset</button>
+    </div>
+
+    <div class="live-active" id="liveActive" style="display:none;">
+      <div class="live-header">
+        <div class="timer-display">
+          <div class="timer-label">Time Remaining</div>
+          <div class="timer-value" id="timerValue">--:--</div>
+        </div>
+        <div class="strategy-summary" id="liveStats"></div>
+      </div>
+
+      <!-- Climb log input -->
+      <div class="log-form" id="logForm">
+        <h3>Log a Climb</h3>
+        <div class="log-inputs">
+          <div class="control-group">
+            <label for="logRouteNum">Route #</label>
+            <select id="logRouteNum"></select>
+          </div>
+          <div class="control-group">
+            <label for="logActualGrade">Felt Like (Grade)</label>
+            <select id="logActualGrade"></select>
+          </div>
+          <div class="control-group">
+            <label for="logAttempts">Attempts</label>
+            <select id="logAttempts">
+              <option value="1">1 (onsight)</option>
+              <option value="2">2</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="logSent">Sent?</label>
+            <select id="logSent">
+              <option value="yes">Yes</option>
+              <option value="no">No (bailed)</option>
+            </select>
+          </div>
+          <button onclick="logClimb()">Log</button>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="recommendations" id="recommendations">
+        <h3>🎯 Recommended Next Routes</h3>
+        <div id="recCards"></div>
+      </div>
+
+      <!-- Climb history -->
+      <div class="climb-history">
+        <h3>Climb Log</h3>
+        <table id="climbLogTable">
+          <tr><th>Time</th><th>Route</th><th>Predicted</th><th>Felt Like</th><th>Attempts</th><th>Sent</th><th>Points</th><th></th></tr>
+        </table>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -190,6 +301,257 @@ function renderStrategy(result) {
 
 // Auto-run on load
 runOptimizer();
+
+// --- Advanced Parameters ---
+const ADV_FIELDS = {
+  compDuration: { el: 'p_compDuration', parse: Number },
+  numRoutes: { el: 'p_numRoutes', parse: Number },
+  maxAttempts: { el: 'p_maxAttempts', parse: Number },
+  retryPenalty: { el: 'p_retryPenalty', parse: v => Number(v) / 100 },
+  climbTimeMin: { el: 'p_climbTimeMin', parse: Number },
+  climbTimeMax: { el: 'p_climbTimeMax', parse: Number },
+  restTimeMin: { el: 'p_restTimeMin', parse: Number },
+  restTimeMax: { el: 'p_restTimeMax', parse: Number },
+  warmupEnd: { el: 'p_warmupEnd', parse: Number },
+  rampEnd: { el: 'p_rampEnd', parse: Number },
+  peakEnd: { el: 'p_peakEnd', parse: Number },
+  warmupFloor: { el: 'p_warmupFloor', parse: v => Number(v) / 100 },
+  warmupCeil: { el: 'p_warmupCeil', parse: v => Number(v) / 100 },
+  fatigueDecay: { el: 'p_fatigueDecay', parse: Number },
+  perfToGradeRange: { el: 'p_perfToGradeRange', parse: Number },
+  failSigmoidK: { el: 'p_failSigmoidK', parse: Number },
+  failSigmoidOffset: { el: 'p_failSigmoidOffset', parse: Number },
+  failCeiling: { el: 'p_failCeiling', parse: Number },
+  retryBenefitThreshold: { el: 'p_retryBenefitThreshold', parse: Number },
+  retryFailReduction: { el: 'p_retryFailReduction', parse: Number },
+};
+
+function applyAdvanced() {
+  const overrides = {};
+  for (const [key, cfg] of Object.entries(ADV_FIELDS)) {
+    overrides[key] = cfg.parse(document.getElementById(cfg.el).value);
+  }
+  S.setParams(overrides);
+  runOptimizer();
+}
+
+function resetAdvanced() {
+  S.resetParams();
+  const defaults = S.DEFAULT_PARAMS;
+  for (const [key, cfg] of Object.entries(ADV_FIELDS)) {
+    let val = defaults[key];
+    // Convert back to display format for percentage fields
+    if (key === 'retryPenalty' || key === 'warmupFloor' || key === 'warmupCeil') val = Math.round(val * 100);
+    document.getElementById(cfg.el).value = val;
+  }
+  runOptimizer();
+}
+
+// ============================================================
+// LIVE COMPETITION MODE
+// ============================================================
+const STORAGE_KEY = 'climbingCompState';
+
+let compState = null; // { startTime, endTime, climbLog, routes, onsightGrade }
+let timerInterval = null;
+
+// --- localStorage ---
+function saveState() {
+  if (compState) localStorage.setItem(STORAGE_KEY, JSON.stringify(compState));
+}
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+function clearState() { localStorage.removeItem(STORAGE_KEY); }
+
+// --- Check for saved state on load ---
+(function checkSavedComp() {
+  const saved = loadState();
+  if (saved && saved.endTime > Date.now()) {
+    document.getElementById('btnResumeComp').style.display = '';
+    document.getElementById('btnResetComp').style.display = '';
+  }
+})();
+
+function startCompetition() {
+  const endTimeStr = document.getElementById('compEndTime').value;
+  if (!endTimeStr) return alert('Set an end time first');
+
+  const [h, m] = endTimeStr.split(':').map(Number);
+  const endDate = new Date();
+  endDate.setHours(h, m, 0, 0);
+  if (endDate <= new Date()) endDate.setDate(endDate.getDate() + 1);
+
+  const routes = S.buildRouteDistribution(
+    document.getElementById('minGrade').value,
+    document.getElementById('maxGrade').value,
+    document.getElementById('centerGrade').value
+  );
+
+  compState = {
+    startTime: Date.now(),
+    endTime: endDate.getTime(),
+    climbLog: [],
+    routes,
+    onsightGrade: document.getElementById('onsightGrade').value,
+  };
+  saveState();
+  activateLiveMode();
+}
+
+function resumeCompetition() {
+  compState = loadState();
+  if (!compState) return;
+  activateLiveMode();
+}
+
+function resetCompetition() {
+  if (!confirm('Reset competition? All logged climbs will be lost.')) return;
+  clearState();
+  compState = null;
+  if (timerInterval) clearInterval(timerInterval);
+  document.getElementById('liveActive').style.display = 'none';
+  document.getElementById('liveSetup').style.display = '';
+  document.getElementById('btnResumeComp').style.display = 'none';
+  document.getElementById('btnResetComp').style.display = 'none';
+}
+
+function activateLiveMode() {
+  document.getElementById('liveSetup').style.display = 'none';
+  document.getElementById('liveActive').style.display = '';
+
+  // Populate route # dropdown with remaining routes
+  populateRouteSelect();
+  // Populate grade dropdown
+  const gradeSelect = document.getElementById('logActualGrade');
+  gradeSelect.innerHTML = grades.map(g => `<option value="${g}">${g}</option>`).join('');
+
+  // Start timer
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+
+  // Initial update
+  updateLiveView();
+  renderClimbLog();
+}
+
+function updateTimer() {
+  if (!compState) return;
+  const remaining = Math.max(0, compState.endTime - Date.now());
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  const el = document.getElementById('timerValue');
+  el.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+  el.className = 'timer-value' + (mins < 15 ? ' timer-urgent' : mins < 30 ? ' timer-warning' : '');
+  if (remaining <= 0) {
+    clearInterval(timerInterval);
+    el.textContent = "TIME'S UP";
+    el.className = 'timer-value timer-urgent';
+  }
+}
+
+function getElapsedMin() {
+  return Math.max(0, (Date.now() - compState.startTime) / 60000);
+}
+
+function getTotalMin() {
+  return (compState.endTime - compState.startTime) / 60000;
+}
+
+function populateRouteSelect() {
+  const completedNums = new Set(compState.climbLog.filter(l => l.sent).map(l => l.routeNum));
+  const sel = document.getElementById('logRouteNum');
+  sel.innerHTML = compState.routes
+    .filter(r => !completedNums.has(r.routeNum))
+    .map(r => `<option value="${r.routeNum}">#${r.routeNum} (${r.grade} — ${r.points}pts)</option>`)
+    .join('');
+}
+
+function logClimb() {
+  const routeNum = parseInt(document.getElementById('logRouteNum').value);
+  const actualGrade = document.getElementById('logActualGrade').value;
+  const attempts = parseInt(document.getElementById('logAttempts').value);
+  const sent = document.getElementById('logSent').value === 'yes';
+
+  compState.climbLog.push({
+    routeNum,
+    actualGrade,
+    attempts,
+    sent,
+    timestamp: Date.now(),
+    elapsedMin: getElapsedMin(),
+  });
+  saveState();
+  populateRouteSelect();
+  updateLiveView();
+  renderClimbLog();
+}
+
+function removeLogEntry(idx) {
+  compState.climbLog.splice(idx, 1);
+  saveState();
+  populateRouteSelect();
+  updateLiveView();
+  renderClimbLog();
+}
+
+function updateLiveView() {
+  const elapsed = getElapsedMin();
+  const total = getTotalMin();
+  const live = S.liveOptimize(compState.routes, compState.onsightGrade, compState.climbLog, elapsed, total);
+
+  // Stats
+  const sentCount = compState.climbLog.filter(l => l.sent).length;
+  document.getElementById('liveStats').innerHTML = `
+    <div class="stat"><div class="val">${Math.round(live.actualPoints).toLocaleString()}</div><div class="lbl">Actual Points</div></div>
+    <div class="stat"><div class="val">${sentCount}</div><div class="lbl">Routes Sent</div></div>
+    <div class="stat"><div class="val">${Math.round(live.projectedTotal).toLocaleString()}</div><div class="lbl">Projected Total</div></div>
+    <div class="stat"><div class="val">${live.gradeOffset >= 0 ? '+' : ''}${live.gradeOffset.toFixed(1)}</div><div class="lbl">Grade Offset</div></div>
+    <div class="stat"><div class="val">${live.remaining}</div><div class="lbl">Routes Left</div></div>
+  `;
+
+  // Recommendations
+  const recEl = document.getElementById('recCards');
+  if (!live.recommendations.length) {
+    recEl.innerHTML = '<p style="color:#888;">No more routes recommended in remaining time.</p>';
+    return;
+  }
+  recEl.innerHTML = live.recommendations.map((r, i) => {
+    const medal = ['🥇', '🥈', '🥉'][i];
+    return `<div class="rec-card">
+      <div class="rec-rank">${medal}</div>
+      <div class="rec-info">
+        <div class="rec-route">Route #${r.route.routeNum}</div>
+        <div class="rec-detail">${r.route.grade} · ${r.route.points} pts · ${Math.round(r.pSend * 100)}% send · ${r.evPerMin.toFixed(1)} EV/min</div>
+      </div>
+      <div class="rec-ev">${Math.round(r.ev)} exp pts</div>
+    </div>`;
+  }).join('');
+}
+
+function renderClimbLog() {
+  const table = document.getElementById('climbLogTable');
+  const headerRow = table.rows[0].outerHTML;
+  table.innerHTML = headerRow;
+  compState.climbLog.forEach((log, idx) => {
+    const route = compState.routes.find(r => r.routeNum === log.routeNum);
+    const pts = log.sent ? route.points * (1 - 0.1 * Math.max(0, log.attempts - 1)) : 0;
+    const row = table.insertRow();
+    row.className = log.sent ? '' : 'log-failed';
+    row.innerHTML = `
+      <td>${Math.round(log.elapsedMin)} min</td>
+      <td>#${log.routeNum}</td>
+      <td>${route ? route.grade : '?'}</td>
+      <td>${log.actualGrade}</td>
+      <td>${log.attempts}</td>
+      <td>${log.sent ? '✅' : '❌'}</td>
+      <td>${log.sent ? Math.round(pts) : '—'}</td>
+      <td><button class="btn-sm" onclick="removeLogEntry(${idx})">✕</button></td>
+    `;
+  });
+}
 </script>
 </body>
 </html>

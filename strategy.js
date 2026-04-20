@@ -3,7 +3,6 @@
 // ============================================================
 
 // --- YDS Grade System ---
-// Ordered list of YDS grades from easiest to hardest
 const YDS_GRADES = [
   '5.4','5.5','5.6','5.7','5.8','5.9',
   '5.10a','5.10b','5.10c','5.10d',
@@ -12,35 +11,58 @@ const YDS_GRADES = [
   '5.13a','5.13b','5.13c','5.13d',
 ];
 
-// Map grade string -> numeric index (0-based)
 const gradeToNum = Object.fromEntries(YDS_GRADES.map((g, i) => [g, i]));
 const numToGrade = (n) => YDS_GRADES[Math.round(Math.max(0, Math.min(n, YDS_GRADES.length - 1)))];
 
+// --- Default Parameters ---
+const DEFAULT_PARAMS = {
+  numRoutes: 37,
+  compDuration: 180,       // minutes
+  maxAttempts: 2,
+  retryPenalty: 0.10,      // 10% point loss per extra attempt
+  // Time model
+  climbTimeMin: 3,         // minutes for easiest routes
+  climbTimeMax: 8,         // minutes for hardest routes
+  restTimeMin: 3,
+  restTimeMax: 12,
+  // Fatigue curve
+  warmupEnd: 30,           // minutes
+  rampEnd: 90,
+  peakEnd: 120,
+  warmupFloor: 0.55,       // performance at minute 0
+  warmupCeil: 0.85,        // performance at end of warmup
+  fatigueDecay: 0.003,     // exponential decay rate after peak
+  perfToGradeRange: 10,    // how many grade steps a full perf swing covers
+  // Fail probability
+  failSigmoidK: 1.8,       // steepness of fail curve
+  failSigmoidOffset: 0.5,  // midpoint offset above onsight grade
+  failCeiling: 1.5,        // grades above onsight = 100% fail
+  retryBenefitThreshold: 2, // grade gap below which retry helps
+  retryFailReduction: 0.6,  // multiplier on fail rate for 2nd attempt
+};
+
+let PARAMS = { ...DEFAULT_PARAMS };
+
+function setParams(overrides) { PARAMS = { ...DEFAULT_PARAMS, ...overrides }; }
+function getParams() { return { ...PARAMS }; }
+function resetParams() { PARAMS = { ...DEFAULT_PARAMS }; }
+
 // --- Route Distribution ---
-// Assigns a YDS grade to each of 37 routes using a normal-ish CDF mapping.
-// Routes are evenly spaced in percentile space; the CDF stretches from min to max
-// with the center grade at route #19 (median).
-function buildRouteDistribution(minGrade, maxGrade, centerGrade, numRoutes = 37) {
+function buildRouteDistribution(minGrade, maxGrade, centerGrade, numRoutes) {
+  numRoutes = numRoutes || PARAMS.numRoutes;
   const lo = gradeToNum[minGrade];
   const hi = gradeToNum[maxGrade];
   const mid = gradeToNum[centerGrade];
 
-  // Use inverse normal CDF (probit) to map uniform route indices to a bell-shaped spread.
-  // We map route i in [0, numRoutes-1] to a percentile in (0,1), then through the
-  // inverse CDF scaled to [lo, hi] with median at mid.
   const routes = [];
   for (let i = 0; i < numRoutes; i++) {
-    // percentile in (0,1) — avoid exact 0 and 1
     const p = (i + 0.5) / numRoutes;
-    // standard normal quantile (rational approximation)
     const z = probit(p);
-    // z ranges roughly -2.5 to +2.5 for our 37 routes
-    // Map z to grade space: z=0 -> centerGrade, stretch asymmetrically to min/max
     let grade;
     if (z <= 0) {
-      grade = mid + (z / 2.5) * (mid - lo); // stretch toward low end
+      grade = mid + (z / 2.5) * (mid - lo);
     } else {
-      grade = mid + (z / 2.5) * (hi - mid); // stretch toward high end
+      grade = mid + (z / 2.5) * (hi - mid);
     }
     grade = Math.max(lo, Math.min(hi, grade));
     routes.push({
@@ -53,7 +75,6 @@ function buildRouteDistribution(minGrade, maxGrade, centerGrade, numRoutes = 37)
   return routes;
 }
 
-// Rational approximation of the inverse normal CDF (probit function)
 function probit(p) {
   if (p <= 0) return -3;
   if (p >= 1) return 3;
@@ -67,108 +88,66 @@ function rationalApprox(t) {
 }
 
 // --- Time Model ---
-// Climb time (minutes) as a function of grade numeric index.
-// Sigmoid ramp: ~3 min for easy grades, ~5.5 min mid, ~8 min for hard.
 function climbTime(gradeNum) {
-  // Sigmoid centered around 5.10d (index 9), steepness k
   const center = gradeToNum['5.10d'];
   const k = 0.5;
-  const minTime = 3;
-  const maxTime = 8;
-  return minTime + (maxTime - minTime) / (1 + Math.exp(-k * (gradeNum - center)));
+  return PARAMS.climbTimeMin + (PARAMS.climbTimeMax - PARAMS.climbTimeMin) / (1 + Math.exp(-k * (gradeNum - center)));
 }
 
-// Rest time (minutes) between attempts.
-// ~3 min for easy, ~8 min mid, ~12 min for hard.
 function restTime(gradeNum) {
   const center = gradeToNum['5.11a'];
   const k = 0.6;
-  const minRest = 3;
-  const maxRest = 12;
-  return minRest + (maxRest - minRest) / (1 + Math.exp(-k * (gradeNum - center)));
+  return PARAMS.restTimeMin + (PARAMS.restTimeMax - PARAMS.restTimeMin) / (1 + Math.exp(-k * (gradeNum - center)));
 }
 
 // --- Failure Probability ---
-// Probability of failing an onsight attempt, given the route grade and climber's max onsight grade.
-// 0% at easy grades, sigmoid ramp to ~70% at onsight limit, ~100% two grades above.
 function failProbability(gradeNum, onsightGradeNum) {
-  // Hard ceiling: anything 2+ grades above onsight is essentially impossible
-  if (gradeNum > onsightGradeNum + 1.5) return 1.0;
-  // Sigmoid: ~0% fail at 4 grades below onsight, ~50% at onsight, ~100% at 2 grades above
-  const midpoint = onsightGradeNum + 0.5;
-  const k = 1.8;
-  const raw = 1 / (1 + Math.exp(-k * (gradeNum - midpoint)));
+  if (gradeNum > onsightGradeNum + PARAMS.failCeiling) return 1.0;
+  const midpoint = onsightGradeNum + PARAMS.failSigmoidOffset;
+  const raw = 1 / (1 + Math.exp(-PARAMS.failSigmoidK * (gradeNum - midpoint)));
   return Math.min(1, Math.max(0, raw));
 }
 
 // --- Fatigue / Performance Curve ---
-// Returns a multiplier [0, 1] representing effective performance at a given minute.
-// This shifts your effective onsight grade: effective = baseOnsight * performanceCurve(t)
-// Shape: warm-up (0-30), ramp (30-90), peak (90-120), decline (120-180)
-function performanceCurve(minute, totalTime = 180) {
-  // Piecewise model using smooth sigmoid transitions
-  // Warm-up: starts at ~0.7, rises to ~0.9 by minute 30
-  // Ramp: 0.9 -> 1.0 by minute 90
-  // Peak: 1.0 from 90-120
-  // Decline: 1.0 -> ~0.8 by minute 180
+function performanceCurve(minute) {
+  const { warmupEnd, rampEnd, peakEnd, warmupFloor, warmupCeil, fatigueDecay } = PARAMS;
 
-  const warmupEnd = 30;
-  const rampEnd = 90;
-  const peakEnd = 120;
-
-  // Warm-up sigmoid (0 -> warmupEnd)
-  const warmupFloor = 0.55;
-  const warmupCeil = 0.85;
   const warmup = warmupFloor + (warmupCeil - warmupFloor) / (1 + Math.exp(-0.2 * (minute - warmupEnd / 2)));
-
-  // Ramp sigmoid (warmupEnd -> rampEnd)
   const ramp = warmupCeil + (1.0 - warmupCeil) / (1 + Math.exp(-0.1 * (minute - (warmupEnd + rampEnd) / 2)));
+  const decay = Math.exp(-fatigueDecay * Math.max(0, minute - peakEnd));
 
-  // Fatigue decay after peak (exponential)
-  const decayRate = 0.003;
-  const decay = 1.0 * Math.exp(-decayRate * Math.max(0, minute - peakEnd));
-
-  // Blend: use warmup early, ramp in middle, decay late
   if (minute <= warmupEnd) return warmup;
   if (minute <= rampEnd) return ramp;
   if (minute <= peakEnd) return 1.0;
   return decay;
 }
 
-// Effective onsight grade at a given minute
 function effectiveOnsight(baseOnsightNum, minute) {
   const perf = performanceCurve(minute);
-  // Scale: at perf=1.0, you're at full onsight. At perf=0.7, you're ~3 grades lower.
-  // Map performance to grade offset: offset = (1 - perf) * range
-  const range = 10; // ~10 grade steps from 5.8 to 5.12a
-  return baseOnsightNum - (1 - perf) * (range * 1.0);
+  return baseOnsightNum - (1 - perf) * (PARAMS.perfToGradeRange * 1.0);
 }
 
 // --- Expected Value Calculation ---
-// For a given route, compute expected points and expected time cost,
-// factoring in fail probability, retry (max 2 attempts), and attempt penalty.
 function routeExpectedValue(route, onsightGradeNum, minute) {
   const effOnsight = effectiveOnsight(onsightGradeNum, minute);
   const pFail = failProbability(route.gradeNum, effOnsight);
   const pSend1 = 1 - pFail;
-  // Second attempt: reduced fail rate only if route is within ~2 grades of effective onsight
+
   const gradeGap = route.gradeNum - effOnsight;
-  const retryBenefit = gradeGap < 2 ? 0.6 : 1.0; // no benefit if route is way above you
+  const retryBenefit = gradeGap < PARAMS.retryBenefitThreshold ? PARAMS.retryFailReduction : 1.0;
   const pFail2 = pFail * retryBenefit;
   const pSend2 = (1 - pSend1) * (1 - pFail2);
 
   const pSendTotal = pSend1 + pSend2;
   if (pSendTotal < 0.05) return { ev: 0, time: Infinity, pSend: 0, attempts: 0 };
 
-  // Points: full on onsight, -10% per extra attempt
-  const expectedPoints = route.points * (pSend1 * 1.0 + pSend2 * 0.9);
+  const penalty = PARAMS.retryPenalty;
+  const expectedPoints = route.points * (pSend1 * 1.0 + pSend2 * (1 - penalty));
 
-  // Time: attempt 1 always happens. Attempt 2 only if attempt 1 fails.
   const ct = climbTime(route.gradeNum);
   const rt = restTime(route.gradeNum);
-  const time1 = ct + rt;
-  const time2 = ct + rt;
-  const expectedTime = time1 + (pFail * time2);
+  const attemptTime = ct + rt;
+  const expectedTime = attemptTime + (pFail * attemptTime);
 
   return {
     ev: expectedPoints,
@@ -176,26 +155,25 @@ function routeExpectedValue(route, onsightGradeNum, minute) {
     evPerMin: expectedPoints / expectedTime,
     pSend: pSendTotal,
     pSend1: pSend1,
-    attempts: 1 + pFail, // expected number of attempts
+    attempts: 1 + pFail,
   };
 }
 
 // --- Greedy Optimizer ---
-// Simulate the 3-hour competition, greedily picking the best EV/min route at each step.
-function optimizeStrategy(routes, onsightGrade, totalTime = 180) {
+function optimizeStrategy(routes, onsightGrade, totalTime) {
+  totalTime = totalTime || PARAMS.compDuration;
   const onsightNum = gradeToNum[onsightGrade];
   const remaining = routes.map(r => ({ ...r }));
   const plan = [];
   let currentTime = 0;
 
   while (currentTime < totalTime && remaining.length > 0) {
-    // Score each remaining route at current time
     let best = null;
     let bestIdx = -1;
     for (let i = 0; i < remaining.length; i++) {
       const rv = routeExpectedValue(remaining[i], onsightNum, currentTime);
       if (rv.time === Infinity) continue;
-      if (currentTime + rv.time > totalTime + 5) continue; // allow slight overrun
+      if (currentTime + rv.time > totalTime + 5) continue;
       if (!best || rv.evPerMin > best.evPerMin) {
         best = { ...rv, route: remaining[i] };
         bestIdx = i;
@@ -225,17 +203,69 @@ function optimizeStrategy(routes, onsightGrade, totalTime = 180) {
   };
 }
 
-// --- Exports for use in dashboard ---
+// --- Grade Recalibration ---
+function calibrateGradeOffset(routes, climbLog) {
+  if (!climbLog.length) return 0;
+  let totalErr = 0, count = 0;
+  for (const log of climbLog) {
+    const route = routes.find(r => r.routeNum === log.routeNum);
+    if (!route || log.actualGrade == null) continue;
+    totalErr += gradeToNum[log.actualGrade] - route.gradeNum;
+    count++;
+  }
+  return count ? totalErr / count : 0;
+}
+
+function applyCalibration(routes, offset) {
+  return routes.map(r => {
+    const shifted = Math.max(0, Math.min(YDS_GRADES.length - 1, r.gradeNum + offset));
+    return { ...r, gradeNum: shifted, grade: numToGrade(shifted) };
+  });
+}
+
+// --- Live Optimizer ---
+function liveOptimize(routes, onsightGrade, climbLog, elapsedMin, totalTime) {
+  totalTime = totalTime || PARAMS.compDuration;
+  const offset = calibrateGradeOffset(routes, climbLog);
+  const calibrated = applyCalibration(routes, offset);
+
+  const completedNums = new Set(climbLog.filter(l => l.sent).map(l => l.routeNum));
+  const remaining = calibrated.filter(r => !completedNums.has(r.routeNum));
+
+  const onsightNum = gradeToNum[onsightGrade];
+  const scored = remaining.map(r => {
+    const rv = routeExpectedValue(r, onsightNum, elapsedMin);
+    return { ...rv, route: r };
+  }).filter(r => r.time !== Infinity && elapsedMin + r.time <= totalTime + 5)
+    .sort((a, b) => b.evPerMin - a.evPerMin);
+
+  const simResult = optimizeStrategy(remaining, onsightGrade, totalTime - elapsedMin);
+  simResult.plan.forEach(p => { p.startMin += elapsedMin; });
+
+  const actualPoints = climbLog.reduce((s, l) => {
+    if (!l.sent) return s;
+    const route = routes.find(r => r.routeNum === l.routeNum);
+    const pen = 1 - PARAMS.retryPenalty * Math.max(0, l.attempts - 1);
+    return s + (route ? route.points * Math.max(0, pen) : 0);
+  }, 0);
+
+  return {
+    recommendations: scored.slice(0, 3),
+    fullPlan: simResult,
+    actualPoints,
+    projectedTotal: actualPoints + simResult.totalExpectedPoints,
+    gradeOffset: offset,
+    remaining: remaining.length,
+    elapsedMin,
+  };
+}
+
+// --- Exports ---
 window.Strategy = {
-  YDS_GRADES,
-  gradeToNum,
-  numToGrade,
-  buildRouteDistribution,
-  climbTime,
-  restTime,
-  failProbability,
-  performanceCurve,
-  effectiveOnsight,
-  routeExpectedValue,
-  optimizeStrategy,
+  YDS_GRADES, gradeToNum, numToGrade,
+  DEFAULT_PARAMS, setParams, getParams, resetParams,
+  buildRouteDistribution, climbTime, restTime,
+  failProbability, performanceCurve, effectiveOnsight,
+  routeExpectedValue, optimizeStrategy,
+  calibrateGradeOffset, applyCalibration, liveOptimize,
 };
