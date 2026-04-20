@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Climbing Comp Strategy</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="strategy.js"></script>
+</head>
+<body>
+  <h1>🧗 Climbing Competition Strategy Dashboard</h1>
+  <p class="subtitle">Optimize your 3-hour comp plan with math</p>
+
+  <div class="controls" id="controls"></div>
+
+  <div class="charts">
+    <div class="chart-card"><h3>Route Distribution</h3><canvas id="chartDist"></canvas></div>
+    <div class="chart-card"><h3>Time &amp; Rest Model</h3><canvas id="chartTime"></canvas></div>
+    <div class="chart-card"><h3>Failure Probability</h3><canvas id="chartFail"></canvas></div>
+    <div class="chart-card"><h3>Performance / Fatigue Curve</h3><canvas id="chartFatigue"></canvas></div>
+  </div>
+
+  <div class="strategy-output" id="strategyOutput">
+    <h2>Optimized Strategy</h2>
+    <p style="color:#666; margin-top:8px;">Configure inputs above and click <strong>Optimize</strong></p>
+  </div>
+
+<script>
+const S = window.Strategy;
+const grades = S.YDS_GRADES;
+
+// --- Build controls ---
+function makeSelect(id, label, options, defaultVal) {
+  const g = document.createElement('div');
+  g.className = 'control-group';
+  g.innerHTML = `<label for="${id}">${label}</label><select id="${id}">${
+    options.map(o => `<option value="${o}"${o === defaultVal ? ' selected' : ''}>${o}</option>`).join('')
+  }</select>`;
+  return g;
+}
+const ctrl = document.getElementById('controls');
+ctrl.appendChild(makeSelect('minGrade', 'Min Grade (Route #1)', grades, '5.9'));
+ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (Route #37)', grades, '5.13d'));
+ctrl.appendChild(makeSelect('centerGrade', 'Center Grade (#19)', grades, '5.11c'));
+ctrl.appendChild(makeSelect('onsightGrade', 'Your Onsight Max', grades, '5.11d'));
+const btn = document.createElement('button');
+btn.textContent = 'Optimize';
+btn.onclick = runOptimizer;
+ctrl.appendChild(btn);
+
+// --- Chart instances ---
+const chartOpts = { responsive: true, plugins: { legend: { labels: { color: '#aaa', font: { size: 11 } } } },
+  scales: { x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2d3a' } },
+            y: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2d3a' } } } };
+
+let charts = {};
+function makeChart(id, type, data, opts = {}) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {
+    type, data, options: { ...chartOpts, ...opts }
+  });
+}
+
+// --- Run ---
+function runOptimizer() {
+  const minG = document.getElementById('minGrade').value;
+  const maxG = document.getElementById('maxGrade').value;
+  const cenG = document.getElementById('centerGrade').value;
+  const onsG = document.getElementById('onsightGrade').value;
+
+  const routes = S.buildRouteDistribution(minG, maxG, cenG);
+  const result = S.optimizeStrategy(routes, onsG);
+
+  drawDistChart(routes);
+  drawTimeChart();
+  drawFailChart(onsG);
+  drawFatigueChart(onsG);
+  renderStrategy(result);
+}
+
+function drawDistChart(routes) {
+  makeChart('chartDist', 'bar', {
+    labels: routes.map(r => '#' + r.routeNum),
+    datasets: [{
+      label: 'Grade',
+      data: routes.map(r => r.gradeNum),
+      backgroundColor: routes.map(r => {
+        const n = r.gradeNum / (grades.length - 1);
+        return `hsl(${(1 - n) * 120}, 70%, 50%)`;
+      }),
+    }]
+  }, {
+    scales: {
+      ...chartOpts.scales,
+      y: { ...chartOpts.scales.y, ticks: { ...chartOpts.scales.y.ticks,
+        callback: v => S.numToGrade(v) } }
+    },
+    plugins: { ...chartOpts.plugins, tooltip: { callbacks: {
+      label: ctx => S.numToGrade(ctx.raw) + ' (' + routes[ctx.dataIndex].points + ' pts)'
+    }}}
+  });
+}
+
+function drawTimeChart() {
+  const labels = grades;
+  makeChart('chartTime', 'line', {
+    labels,
+    datasets: [
+      { label: 'Climb Time (min)', data: grades.map((_, i) => S.climbTime(i)), borderColor: '#4a7cff', tension: 0.4, fill: false },
+      { label: 'Rest Time (min)', data: grades.map((_, i) => S.restTime(i)), borderColor: '#f0ad4e', tension: 0.4, fill: false },
+    ]
+  });
+}
+
+function drawFailChart(onsG) {
+  const onsNum = S.gradeToNum[onsG];
+  makeChart('chartFail', 'line', {
+    labels: grades,
+    datasets: [{
+      label: 'Fail Probability',
+      data: grades.map((_, i) => S.failProbability(i, onsNum)),
+      borderColor: '#d9534f', backgroundColor: 'rgba(217,83,79,0.1)', tension: 0.4, fill: true,
+    }]
+  }, {
+    scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, min: 0, max: 1,
+      ticks: { ...chartOpts.scales.y.ticks, callback: v => (v * 100) + '%' } } }
+  });
+}
+
+function drawFatigueChart(onsG) {
+  const onsNum = S.gradeToNum[onsG];
+  const mins = Array.from({ length: 181 }, (_, i) => i);
+  makeChart('chartFatigue', 'line', {
+    labels: mins.map(m => m + 'min'),
+    datasets: [
+      { label: 'Performance %', data: mins.map(m => S.performanceCurve(m)), borderColor: '#5cb85c', tension: 0.3, fill: false, yAxisID: 'y' },
+      { label: 'Effective Onsight', data: mins.map(m => S.effectiveOnsight(onsNum, m)), borderColor: '#5bc0de', tension: 0.3, fill: false, yAxisID: 'y1' },
+    ]
+  }, {
+    scales: {
+      x: { ...chartOpts.scales.x, ticks: { ...chartOpts.scales.x.ticks, maxTicksLimit: 12 } },
+      y: { position: 'left', min: 0.5, max: 1.05, ticks: { color: '#888', callback: v => Math.round(v * 100) + '%' }, grid: { color: '#2a2d3a' } },
+      y1: { position: 'right', ticks: { color: '#888', callback: v => S.numToGrade(v) }, grid: { drawOnChartArea: false } },
+    }
+  });
+}
+
+function renderStrategy(result) {
+  const el = document.getElementById('strategyOutput');
+  const phaseClass = (min) => {
+    if (min < 30) return 'phase-warmup';
+    if (min < 90) return 'phase-ramp';
+    if (min < 120) return 'phase-peak';
+    return 'phase-fatigue';
+  };
+  const phaseLabel = (min) => {
+    if (min < 30) return '🔥 Warm-up';
+    if (min < 90) return '📈 Ramp';
+    if (min < 120) return '⚡ Peak';
+    return '😓 Fatigue';
+  };
+
+  el.innerHTML = `
+    <h2>Optimized Strategy</h2>
+    <div class="strategy-summary">
+      <div class="stat"><div class="val">${Math.round(result.totalExpectedPoints).toLocaleString()}</div><div class="lbl">Expected Points</div></div>
+      <div class="stat"><div class="val">${result.routesAttempted}</div><div class="lbl">Routes Attempted</div></div>
+      <div class="stat"><div class="val">${Math.round(result.totalTime)} min</div><div class="lbl">Total Time</div></div>
+      <div class="stat"><div class="val">${Math.round(result.totalExpectedPoints / result.routesAttempted)}</div><div class="lbl">Avg Pts / Route</div></div>
+    </div>
+    <table>
+      <tr><th>#</th><th>Time</th><th>Phase</th><th>Route</th><th>Grade</th><th>Points</th><th>Send %</th><th>EV/min</th><th>Exp. Pts</th></tr>
+      ${result.plan.map((p, i) => `
+        <tr class="${phaseClass(p.startMin)}">
+          <td>${i + 1}</td>
+          <td>${Math.round(p.startMin)} min</td>
+          <td>${phaseLabel(p.startMin)}</td>
+          <td>Route #${p.route.routeNum}</td>
+          <td>${p.route.grade}</td>
+          <td>${p.route.points}</td>
+          <td>${Math.round(p.pSend * 100)}%</td>
+          <td>${p.evPerMin.toFixed(1)}</td>
+          <td>${Math.round(p.expectedPoints)}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+// Auto-run on load
+runOptimizer();
+</script>
+</body>
+</html>
