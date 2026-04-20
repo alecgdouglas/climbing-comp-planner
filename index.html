@@ -5,17 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Climbing Comp Strategy</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="strategy.js"></script>
 </head>
 <body>
-  <h1>🧗 Climbing Competition Strategy Dashboard</h1>
+  <h1><span class="mi">landscape</span> Climbing Competition Strategy Dashboard</h1>
   <p class="subtitle">Optimize your 3-hour comp plan with math</p>
 
   <div class="controls" id="controls"></div>
 
   <details class="advanced-panel" id="advancedPanel">
-    <summary>⚙️ Advanced Parameters</summary>
+    <summary><span class="mi">settings</span> Advanced Parameters</summary>
     <div class="advanced-grid">
       <fieldset>
         <legend>Competition</legend>
@@ -70,7 +71,7 @@
 
   <!-- Live Competition Mode -->
   <div class="live-section" id="liveSection">
-    <h2>🏁 Live Competition Mode</h2>
+    <h2><span class="mi">flag</span> Live Competition Mode</h2>
 
     <div class="live-setup" id="liveSetup">
       <div class="control-group">
@@ -123,7 +124,7 @@
 
       <!-- Recommendations -->
       <div class="recommendations" id="recommendations">
-        <h3>🎯 Recommended Next Routes</h3>
+        <h3><span class="mi">target</span> Recommended Next Routes</h3>
         <div id="recCards"></div>
       </div>
 
@@ -266,10 +267,10 @@ function renderStrategy(result) {
     return 'phase-fatigue';
   };
   const phaseLabel = (min) => {
-    if (min < 30) return '🔥 Warm-up';
-    if (min < 90) return '📈 Ramp';
-    if (min < 120) return '⚡ Peak';
-    return '😓 Fatigue';
+    if (min < 30) return '<span class="mi">whatshot</span> Warm-up';
+    if (min < 90) return '<span class="mi">trending_up</span> Ramp';
+    if (min < 120) return '<span class="mi">bolt</span> Peak';
+    return '<span class="mi">trending_down</span> Fatigue';
   };
 
   el.innerHTML = `
@@ -519,7 +520,7 @@ function updateLiveView() {
     return;
   }
   recEl.innerHTML = live.recommendations.map((r, i) => {
-    const medal = ['🥇', '🥈', '🥉'][i];
+    const medal = ['<span class="mi">looks_one</span>', '<span class="mi">looks_two</span>', '<span class="mi">looks_3</span>'][i];
     return `<div class="rec-card">
       <div class="rec-rank">${medal}</div>
       <div class="rec-info">
@@ -546,7 +547,7 @@ function renderClimbLog() {
       <td>${route ? route.grade : '?'}</td>
       <td>${log.actualGrade}</td>
       <td>${log.attempts}</td>
-      <td>${log.sent ? '✅' : '❌'}</td>
+      <td>${log.sent ? '<span class="mi">check_circle</span>' : '<span class="mi">cancel</span>'}</td>
       <td>${log.sent ? Math.round(pts) : '—'}</td>
       <td><button class="btn-sm" onclick="removeLogEntry(${idx})">✕</button></td>
     `;
