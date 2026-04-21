@@ -78,14 +78,16 @@ th.r, td.r { text-align: right; }
 .log-inputs { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .log-inputs select { background: #2a2d3a; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
 
-.toggle-switch { display: flex; align-items: center; gap: 6px; }
-.toggle-label { font-size: 0.8rem; color: #aaa; }
-.toggle { position: relative; width: 36px; height: 20px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; inset: 0; background: #4a7cff; border-radius: 20px; cursor: pointer; transition: background 0.2s; }
-.toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
-.toggle input:checked + .toggle-slider { background: #5cb85c; }
-.toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+.grade-toggle { width: 80px; height: 30px; }
+.grade-toggle input { display: none; }
+.grade-toggle label { height: 100%; width: 100%; display: block; }
+.gt-switch { cursor: pointer; width: 100%; height: 100%; position: relative; background: #444; color: #aaa; border-radius: 4px; padding: 2px; transition: background 0.3s; }
+.gt-switch::before, .gt-switch::after { border-radius: 3px; height: calc(100% - 4px); width: calc(50% - 3px); display: flex; align-items: center; justify-content: center; position: absolute; font-size: 0.75rem; font-weight: 600; transition: all 0.3s; }
+.gt-switch::before { background: #fff; color: #222; box-shadow: 0 1px 3px rgba(0,0,0,0.3); left: 2px; z-index: 1; content: attr(data-unchecked); }
+.gt-switch::after { right: 2px; content: attr(data-checked); }
+.grade-toggle input:checked + label .gt-switch { background: #5cb85c; }
+.grade-toggle input:checked + label .gt-switch::after { left: 2px; right: auto; content: attr(data-unchecked); color: #aaa; }
+.grade-toggle input:checked + label .gt-switch::before { left: calc(50% + 1px); content: attr(data-checked); color: #2a7a2a; }
 
 .recommendations { margin-bottom: 20px; }
 .recommendations h3 { font-size: 0.85rem; color: #aaa; text-transform: uppercase; margin-bottom: 10px; }
