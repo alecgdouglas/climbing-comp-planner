@@ -19,6 +19,7 @@ button:hover { background: #3a6aee; }
 .advanced-panel summary { padding: 14px 16px; cursor: pointer; color: #aaa; font-size: 0.9rem; font-weight: 600; }
 .advanced-panel summary:hover { color: #fff; }
 .advanced-panel[open] summary { border-bottom: 1px solid #2a2d3a; }
+.advanced-panel[open] { padding-bottom: 16px; }
 .advanced-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 16px; }
 .advanced-grid fieldset { border: 1px solid #2a2d3a; border-radius: 8px; padding: 12px; }
 .advanced-grid legend { color: #4a7cff; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 6px; }
