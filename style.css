@@ -85,9 +85,9 @@ th.r, td.r { text-align: right; }
 .gt-switch::before, .gt-switch::after { border-radius: 3px; height: calc(100% - 4px); width: calc(50% - 3px); display: flex; align-items: center; justify-content: center; position: absolute; font-size: 0.75rem; font-weight: 600; transition: all 0.3s; }
 .gt-switch::before { background: #fff; color: #222; box-shadow: 0 1px 3px rgba(0,0,0,0.3); left: 2px; z-index: 1; content: attr(data-unchecked); }
 .gt-switch::after { right: 2px; content: attr(data-checked); }
-.grade-toggle input:checked + label .gt-switch { background: #5cb85c; }
+.grade-toggle input:checked + label .gt-switch { background: #444; }
 .grade-toggle input:checked + label .gt-switch::after { left: 2px; right: auto; content: attr(data-unchecked); color: #aaa; }
-.grade-toggle input:checked + label .gt-switch::before { left: calc(50% + 1px); content: attr(data-checked); color: #2a7a2a; }
+.grade-toggle input:checked + label .gt-switch::before { left: calc(50% + 1px); content: attr(data-checked); color: #222; }
 
 .recommendations { margin-bottom: 20px; }
 .recommendations h3 { font-size: 0.85rem; color: #aaa; text-transform: uppercase; margin-bottom: 10px; }
