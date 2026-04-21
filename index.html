@@ -273,10 +273,10 @@ function renderStrategy(result) {
     return 'phase-fatigue';
   };
   const phaseLabel = (min) => {
-    if (min < 30) return '<span class="mi">whatshot</span> Warm-up';
-    if (min < 90) return '<span class="mi">trending_up</span> Ramp';
-    if (min < 120) return '<span class="mi">bolt</span> Peak';
-    return '<span class="mi">trending_down</span> Fatigue';
+    if (min < 30) return '<span class="mi">speed</span>';
+    if (min < 90) return '<span class="mi">trending_up</span>';
+    if (min < 120) return '<span class="mi">bolt</span>';
+    return '<span class="mi">trending_down</span>';
   };
 
   el.innerHTML = `
@@ -288,13 +288,13 @@ function renderStrategy(result) {
       <div class="stat"><div class="val">${Math.round(result.totalExpectedPoints / result.routesAttempted)}</div><div class="lbl">Avg Pts / Route</div></div>
     </div>
     <div class="table-wrap"><table>
-      <tr><th>#</th><th>Time</th><th>Phase</th><th>Route</th><th>Grade</th><th>Points</th><th>Send %</th><th>EV/min</th><th>Exp. Pts</th></tr>
+      <tr><th>#</th><th>Time (min)</th><th>Phase</th><th>Route</th><th>Grade</th><th>Points</th><th>Send %</th><th>EV/min</th><th>Exp. Pts</th></tr>
       ${result.plan.map((p, i) => `
         <tr class="${phaseClass(p.startMin)}">
           <td>${i + 1}</td>
-          <td>${Math.round(p.startMin)} min</td>
+          <td>${Math.round(p.startMin)}</td>
           <td>${phaseLabel(p.startMin)}</td>
-          <td>Route #${p.route.routeNum}</td>
+          <td>#${p.route.routeNum}</td>
           <td>${p.route.grade}</td>
           <td>${p.route.points}</td>
           <td>${Math.round(p.pSend * 100)}%</td>
