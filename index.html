@@ -515,6 +515,12 @@ function resetRefreshTimer() {
   liveRefreshInterval = setInterval(updateLiveView, 60000);
 }
 
+function prefillLog(routeNum, grade) {
+  document.getElementById('logRouteNum').value = routeNum;
+  document.getElementById('logActualGrade').value = grade;
+  document.getElementById('logForm').scrollIntoView({ behavior: 'smooth' });
+}
+
 function updateLiveView() {
   const elapsed = getElapsedMin();
   const total = getTotalMin();
@@ -538,7 +544,7 @@ function updateLiveView() {
   } else {
     recEl.innerHTML = live.recommendations.map((r, i) => {
       const medal = ['<span class="mi">looks_one</span>', '<span class="mi">looks_two</span>', '<span class="mi">looks_3</span>'][i];
-      return `<div class="rec-card">
+      return `<div class="rec-card" onclick="prefillLog(${r.route.routeNum},'${r.route.grade}')" style="cursor:pointer">
         <div class="rec-rank">${medal}</div>
         <div class="rec-info">
           <div class="rec-route">Route #${r.route.routeNum}</div>
