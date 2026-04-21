@@ -623,7 +623,7 @@ function renderTimelineChart(live) {
   const totalBars = actualBars.length + projBars.length;
   const chartWidth = document.getElementById('chartTimeline').clientWidth || 400;
   const barWidth = Math.max(4, Math.min(20, Math.floor(chartWidth / Math.max(totalBars, 1) * 0.6)));
-  timelineNowMin = elapsed;
+  timelineNowMin = getElapsedMin();
 
   const data = {
     datasets: [
