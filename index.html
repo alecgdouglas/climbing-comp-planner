@@ -100,11 +100,12 @@
             <select id="logRouteNum"></select>
           </div>
           <div class="control-group">
-            <label for="logType">Type</label>
-            <select id="logType" onchange="updateGradeDropdown()">
-              <option value="rope">Rope</option>
-              <option value="boulder">Boulder</option>
-            </select>
+            <label>Type</label>
+            <div class="toggle-switch">
+              <span class="toggle-label">Rope</span>
+              <label class="toggle"><input type="checkbox" id="logType" onchange="updateGradeDropdown()"><span class="toggle-slider"></span></label>
+              <span class="toggle-label">Boulder</span>
+            </div>
           </div>
           <div class="control-group">
             <label for="logActualGrade">Felt Like</label>
@@ -442,7 +443,7 @@ function resetCompetition() {
 
 function updateGradeDropdown() {
   const sel = document.getElementById('logActualGrade');
-  const isBoulder = document.getElementById('logType').value === 'boulder';
+  const isBoulder = document.getElementById('logType').checked;
   const list = isBoulder ? S.V_GRADE_LIST : grades;
   sel.innerHTML = list.map(g => `<option value="${g}">${g}</option>`).join('');
 }
@@ -537,7 +538,7 @@ function resetRefreshTimer() {
 
 function prefillLog(routeNum, grade) {
   document.getElementById('logRouteNum').value = routeNum;
-  document.getElementById('logType').value = 'rope';
+  document.getElementById('logType').checked = false;
   updateGradeDropdown();
   document.getElementById('logActualGrade').value = grade;
   document.getElementById('logForm').scrollIntoView({ behavior: 'smooth' });
