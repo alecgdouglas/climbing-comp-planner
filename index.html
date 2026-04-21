@@ -127,6 +127,12 @@
         <div id="recCards"></div>
       </div>
 
+      <!-- Live timeline chart -->
+      <div class="chart-card" style="margin-bottom:20px;">
+        <h3>Climb Timeline</h3>
+        <canvas id="chartTimeline"></canvas>
+      </div>
+
       <!-- Climb history -->
       <div class="climb-history">
         <h3>Climb Log</h3>
@@ -517,19 +523,110 @@ function updateLiveView() {
   const recEl = document.getElementById('recCards');
   if (!live.recommendations.length) {
     recEl.innerHTML = '<p style="color:#888;">No more routes recommended in remaining time.</p>';
-    return;
+  } else {
+    recEl.innerHTML = live.recommendations.map((r, i) => {
+      const medal = ['<span class="mi">looks_one</span>', '<span class="mi">looks_two</span>', '<span class="mi">looks_3</span>'][i];
+      return `<div class="rec-card">
+        <div class="rec-rank">${medal}</div>
+        <div class="rec-info">
+          <div class="rec-route">Route #${r.route.routeNum}</div>
+          <div class="rec-detail">${r.route.grade} · ${r.route.points} pts · ${Math.round(r.pSend * 100)}% send · ${r.evPerMin.toFixed(1)} EV/min</div>
+        </div>
+        <div class="rec-ev">${Math.round(r.ev)} exp pts</div>
+      </div>`;
+    }).join('');
   }
-  recEl.innerHTML = live.recommendations.map((r, i) => {
-    const medal = ['<span class="mi">looks_one</span>', '<span class="mi">looks_two</span>', '<span class="mi">looks_3</span>'][i];
-    return `<div class="rec-card">
-      <div class="rec-rank">${medal}</div>
-      <div class="rec-info">
-        <div class="rec-route">Route #${r.route.routeNum}</div>
-        <div class="rec-detail">${r.route.grade} · ${r.route.points} pts · ${Math.round(r.pSend * 100)}% send · ${r.evPerMin.toFixed(1)} EV/min</div>
-      </div>
-      <div class="rec-ev">${Math.round(r.ev)} exp pts</div>
-    </div>`;
-  }).join('');
+
+  renderTimelineChart(live);
+}
+
+let timelineChart = null;
+function renderTimelineChart(live) {
+  const log = compState.climbLog;
+
+  // Actual climbs: bars at their logged time
+  const actualBars = log.map(l => ({
+    x: Math.round(l.elapsedMin),
+    y: S.gradeToNum[l.actualGrade],
+    routeNum: l.routeNum,
+    grade: l.actualGrade,
+    sent: l.sent,
+  }));
+
+  // Projected climbs from the optimizer's full plan
+  const projBars = live.fullPlan.plan.map(p => ({
+    x: Math.round(p.startMin),
+    y: p.route.gradeNum,
+    routeNum: p.route.routeNum,
+    grade: p.route.grade,
+    pSend: p.pSend,
+  }));
+
+  const data = {
+    datasets: [
+      {
+        label: 'Completed',
+        data: actualBars,
+        backgroundColor: actualBars.map(b => b.sent ? '#5cb85c' : '#d9534f'),
+        borderColor: actualBars.map(b => b.sent ? '#5cb85c' : '#d9534f'),
+        borderWidth: 1,
+        barPercentage: 0.9,
+        order: 1,
+      },
+      {
+        label: 'Projected',
+        data: projBars,
+        backgroundColor: 'rgba(74, 124, 255, 0.3)',
+        borderColor: 'rgba(74, 124, 255, 0.6)',
+        borderWidth: 1,
+        borderDash: [4, 4],
+        barPercentage: 0.9,
+        order: 2,
+      },
+    ],
+  };
+
+  const opts = {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#aaa', font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          title: ctx => ctx[0].raw.x + ' min',
+          label: ctx => {
+            const d = ctx.raw;
+            const prefix = ctx.datasetIndex === 0
+              ? `#${d.routeNum} — ${d.grade}` + (d.sent ? ' ✓' : ' ✗')
+              : `#${d.routeNum} — ${d.grade} (${Math.round(d.pSend * 100)}%)`;
+            return prefix;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: 'linear',
+        title: { display: true, text: 'Minutes', color: '#888' },
+        min: 0,
+        max: Math.ceil(getTotalMin()),
+        ticks: { color: '#888', stepSize: 15 },
+        grid: { color: '#2a2d3a' },
+      },
+      y: {
+        title: { display: true, text: 'Grade', color: '#888' },
+        ticks: { color: '#888', callback: v => S.numToGrade(v) },
+        grid: { color: '#2a2d3a' },
+      },
+    },
+  };
+
+  if (timelineChart) {
+    timelineChart.data = data;
+    timelineChart.options = opts;
+    timelineChart.update();
+  } else {
+    timelineChart = new Chart(document.getElementById('chartTimeline'), { type: 'bar', data, options: opts });
+  }
 }
 
 function renderClimbLog() {
