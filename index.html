@@ -497,6 +497,7 @@ function logClimb() {
   populateRouteSelect();
   updateLiveView();
   renderClimbLog();
+  resetRefreshTimer();
 }
 
 function removeLogEntry(idx) {
@@ -505,6 +506,12 @@ function removeLogEntry(idx) {
   populateRouteSelect();
   updateLiveView();
   renderClimbLog();
+  resetRefreshTimer();
+}
+
+function resetRefreshTimer() {
+  if (liveRefreshInterval) clearInterval(liveRefreshInterval);
+  liveRefreshInterval = setInterval(updateLiveView, 60000);
 }
 
 function updateLiveView() {
