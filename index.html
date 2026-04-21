@@ -559,6 +559,25 @@ function updateLiveView() {
 }
 
 let timelineChart = null;
+let timelineNowMin = 0;
+const nowLinePlugin = {
+  id: 'nowLine',
+  afterDatasetsDraw(chart) {
+    const xScale = chart.scales.x;
+    const x = xScale.getPixelForValue(timelineNowMin);
+    if (x < xScale.left || x > xScale.right) return;
+    const { ctx } = chart;
+    ctx.save();
+    ctx.strokeStyle = '#d9534f';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, chart.chartArea.top);
+    ctx.lineTo(x, chart.chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
 function renderTimelineChart(live) {
   const log = compState.climbLog;
   const P = S.getParams();
@@ -604,6 +623,7 @@ function renderTimelineChart(live) {
   const totalBars = actualBars.length + projBars.length;
   const chartWidth = document.getElementById('chartTimeline').clientWidth || 400;
   const barWidth = Math.max(4, Math.min(20, Math.floor(chartWidth / Math.max(totalBars, 1) * 0.6)));
+  timelineNowMin = elapsed;
 
   const data = {
     datasets: [
@@ -711,7 +731,7 @@ function renderTimelineChart(live) {
     timelineChart.options = opts;
     timelineChart.update();
   } else {
-    timelineChart = new Chart(document.getElementById('chartTimeline'), { type: 'bar', data, options: opts });
+    timelineChart = new Chart(document.getElementById('chartTimeline'), { type: 'bar', data, options: opts, plugins: [nowLinePlugin] });
   }
 }
 
