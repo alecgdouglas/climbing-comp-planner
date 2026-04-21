@@ -125,7 +125,7 @@
       <div class="climb-history">
         <h3>Climb Log</h3>
         <div class="table-wrap"><table id="climbLogTable">
-          <tr><th>Time</th><th>Route</th><th>Predicted</th><th>Felt Like</th><th>Attempts</th><th>Sent</th><th>Points</th><th></th></tr>
+          <tr><th class="r">Time (min)</th><th class="r">Route</th><th class="r">Predicted</th><th class="r">Felt Like</th><th class="r">Attempts</th><th>Sent</th><th class="r">Points</th><th></th></tr>
         </table></div>
       </div>
 
@@ -288,18 +288,18 @@ function renderStrategy(result) {
       <div class="stat"><div class="val">${Math.round(result.totalExpectedPoints / result.routesAttempted)}</div><div class="lbl">Avg Pts / Route</div></div>
     </div>
     <div class="table-wrap"><table>
-      <tr><th>#</th><th>Time (min)</th><th>Phase</th><th>Route</th><th>Grade</th><th>Points</th><th>Send %</th><th>EV/min</th><th>Exp. Pts</th></tr>
+      <tr><th class="r">#</th><th class="r">Time (min)</th><th>Phase</th><th class="r">Route</th><th class="r">Grade</th><th class="r">Points</th><th class="r">Send %</th><th class="r">EV/min</th><th class="r">Exp. Pts</th></tr>
       ${result.plan.map((p, i) => `
         <tr class="${phaseClass(p.startMin)}">
-          <td>${i + 1}</td>
-          <td>${Math.round(p.startMin)}</td>
+          <td class="r">${i + 1}</td>
+          <td class="r">${Math.round(p.startMin)}</td>
           <td>${phaseLabel(p.startMin)}</td>
-          <td>#${p.route.routeNum}</td>
-          <td>${p.route.grade}</td>
-          <td>${p.route.points}</td>
-          <td>${Math.round(p.pSend * 100)}%</td>
-          <td>${p.evPerMin.toFixed(1)}</td>
-          <td>${Math.round(p.expectedPoints)}</td>
+          <td class="r">#${p.route.routeNum}</td>
+          <td class="r">${p.route.grade}</td>
+          <td class="r">${p.route.points}</td>
+          <td class="r">${Math.round(p.pSend * 100)}%</td>
+          <td class="r">${p.evPerMin.toFixed(1)}</td>
+          <td class="r">${Math.round(p.expectedPoints)}</td>
         </tr>
       `).join('')}
     </table></div>
@@ -725,13 +725,13 @@ function renderClimbLog() {
     const row = table.insertRow();
     row.className = log.sent ? '' : 'log-failed';
     row.innerHTML = `
-      <td>${Math.round(log.elapsedMin)} min</td>
-      <td>#${log.routeNum}</td>
-      <td>${route ? route.grade : '?'}</td>
-      <td>${log.actualGrade}</td>
-      <td>${log.attempts}</td>
+      <td class="r">${Math.round(log.elapsedMin)}</td>
+      <td class="r">#${log.routeNum}</td>
+      <td class="r">${route ? route.grade : '?'}</td>
+      <td class="r">${log.actualGrade}</td>
+      <td class="r">${log.attempts}</td>
       <td>${log.sent ? '<span class="mi">check_circle</span>' : '<span class="mi">cancel</span>'}</td>
-      <td>${log.sent ? Math.round(pts) : '—'}</td>
+      <td class="r">${log.sent ? Math.round(pts) : '—'}</td>
       <td><button class="btn-sm" onclick="removeLogEntry(${idx})">✕</button></td>
     `;
   });
