@@ -127,18 +127,18 @@
         <div id="recCards"></div>
       </div>
 
-      <!-- Live timeline chart -->
-      <div class="chart-card" style="margin-bottom:20px;">
-        <h3>Climb Timeline</h3>
-        <canvas id="chartTimeline"></canvas>
-      </div>
-
       <!-- Climb history -->
       <div class="climb-history">
         <h3>Climb Log</h3>
         <table id="climbLogTable">
           <tr><th>Time</th><th>Route</th><th>Predicted</th><th>Felt Like</th><th>Attempts</th><th>Sent</th><th>Points</th><th></th></tr>
         </table>
+      </div>
+
+      <!-- Live timeline chart -->
+      <div class="chart-card" style="margin-bottom:20px;">
+        <h3>Climb Timeline <button class="btn-sm" onclick="updateLiveView()" title="Refresh projections"><span class="mi" style="font-size:14px">refresh</span></button></h3>
+        <canvas id="chartTimeline"></canvas>
       </div>
     </div>
   </div>
@@ -360,6 +360,7 @@ const STORAGE_KEY = 'climbingCompState';
 
 let compState = null; // { startTime, endTime, climbLog, routes, onsightGrade }
 let timerInterval = null;
+let liveRefreshInterval = null;
 
 // --- localStorage ---
 function saveState() {
@@ -417,6 +418,7 @@ function resetCompetition() {
   clearState();
   compState = null;
   if (timerInterval) clearInterval(timerInterval);
+  if (liveRefreshInterval) clearInterval(liveRefreshInterval);
   document.getElementById('liveActive').style.display = 'none';
   document.getElementById('liveSetup').style.display = '';
   document.getElementById('btnResumeComp').style.display = 'none';
@@ -435,7 +437,9 @@ function activateLiveMode() {
 
   // Start timer
   if (timerInterval) clearInterval(timerInterval);
+  if (liveRefreshInterval) clearInterval(liveRefreshInterval);
   timerInterval = setInterval(updateTimer, 1000);
+  liveRefreshInterval = setInterval(updateLiveView, 60000);
   updateTimer();
 
   // Initial update
