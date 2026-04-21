@@ -121,12 +121,6 @@
         </div>
       </div>
 
-      <!-- Recommendations -->
-      <div class="recommendations" id="recommendations">
-        <h3><span class="mi">target</span> Recommended Next Routes</h3>
-        <div id="recCards"></div>
-      </div>
-
       <!-- Climb history -->
       <div class="climb-history">
         <h3>Climb Log</h3>
@@ -135,10 +129,17 @@
         </table>
       </div>
 
-      <!-- Live timeline chart -->
-      <div class="chart-card" style="margin-bottom:20px;">
-        <h3>Climb Timeline <button class="btn-sm" onclick="updateLiveView()" title="Refresh projections"><span class="mi" style="font-size:14px">refresh</span></button></h3>
-        <canvas id="chartTimeline"></canvas>
+      <!-- Recommendations & Timeline -->
+      <div class="projections-section">
+        <h3><span class="mi">insights</span> Recommendations &amp; Timeline <button class="btn-sm" onclick="updateLiveView(); resetRefreshTimer();" title="Refresh projections"><span class="mi" style="font-size:14px">refresh</span></button></h3>
+
+        <div class="recommendations" id="recommendations">
+          <div id="recCards"></div>
+        </div>
+
+        <div class="chart-card" style="margin-top:16px;">
+          <canvas id="chartTimeline"></canvas>
+        </div>
       </div>
     </div>
   </div>
