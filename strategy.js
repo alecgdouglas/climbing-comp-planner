@@ -128,7 +128,8 @@ function effectiveOnsight(baseOnsightNum, minute) {
 }
 
 // --- Expected Value Calculation ---
-function routeExpectedValue(route, onsightGradeNum, minute) {
+function routeExpectedValue(route, onsightGradeNum, minute, timeMult) {
+  timeMult = timeMult || 1.0;
   const effOnsight = effectiveOnsight(onsightGradeNum, minute);
   const pFail = failProbability(route.gradeNum, effOnsight);
   const pSend1 = 1 - pFail;
@@ -146,7 +147,7 @@ function routeExpectedValue(route, onsightGradeNum, minute) {
 
   const ct = climbTime(route.gradeNum);
   const rt = restTime(route.gradeNum);
-  const attemptTime = ct + rt;
+  const attemptTime = (ct + rt) * timeMult;
   const expectedTime = attemptTime + (pFail * attemptTime);
 
   return {
@@ -160,8 +161,9 @@ function routeExpectedValue(route, onsightGradeNum, minute) {
 }
 
 // --- Greedy Optimizer ---
-function optimizeStrategy(routes, onsightGrade, totalTime) {
+function optimizeStrategy(routes, onsightGrade, totalTime, timeMult) {
   totalTime = totalTime || PARAMS.compDuration;
+  timeMult = timeMult || 1.0;
   const onsightNum = gradeToNum[onsightGrade];
   const remaining = routes.map(r => ({ ...r }));
   const plan = [];
@@ -171,7 +173,7 @@ function optimizeStrategy(routes, onsightGrade, totalTime) {
     let best = null;
     let bestIdx = -1;
     for (let i = 0; i < remaining.length; i++) {
-      const rv = routeExpectedValue(remaining[i], onsightNum, currentTime);
+      const rv = routeExpectedValue(remaining[i], onsightNum, currentTime, timeMult);
       if (rv.time === Infinity) continue;
       if (currentTime + rv.time > totalTime + 5) continue;
       if (!best || rv.evPerMin > best.evPerMin) {
@@ -216,6 +218,28 @@ function calibrateGradeOffset(routes, climbLog) {
   return count ? totalErr / count : 0;
 }
 
+// --- Time Recalibration ---
+// Computes ratio of actual time per climb vs model-predicted time.
+// Each gap between consecutive log entries = total time consumed (climb + rest/belay).
+function calibrateTimeMultiplier(routes, climbLog) {
+  if (climbLog.length < 2) return 1.0;
+  const sorted = [...climbLog].sort((a, b) => a.elapsedMin - b.elapsedMin);
+  let totalActual = 0, totalPredicted = 0, count = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const actual = sorted[i].elapsedMin - sorted[i - 1].elapsedMin;
+    if (actual <= 0) continue;
+    const route = routes.find(r => r.routeNum === sorted[i - 1].routeNum);
+    if (!route) continue;
+    const predicted = climbTime(route.gradeNum) + restTime(route.gradeNum);
+    totalActual += actual;
+    totalPredicted += predicted;
+    count++;
+  }
+  if (!count || totalPredicted === 0) return 1.0;
+  // Clamp to 0.5x–3x to avoid wild swings from one or two outliers
+  return Math.max(0.5, Math.min(3.0, totalActual / totalPredicted));
+}
+
 function applyCalibration(routes, offset) {
   return routes.map(r => {
     const shifted = Math.max(0, Math.min(YDS_GRADES.length - 1, r.gradeNum + offset));
@@ -228,18 +252,19 @@ function liveOptimize(routes, onsightGrade, climbLog, elapsedMin, totalTime) {
   totalTime = totalTime || PARAMS.compDuration;
   const offset = calibrateGradeOffset(routes, climbLog);
   const calibrated = applyCalibration(routes, offset);
+  const timeMult = calibrateTimeMultiplier(routes, climbLog);
 
   const completedNums = new Set(climbLog.filter(l => l.sent).map(l => l.routeNum));
   const remaining = calibrated.filter(r => !completedNums.has(r.routeNum));
 
   const onsightNum = gradeToNum[onsightGrade];
   const scored = remaining.map(r => {
-    const rv = routeExpectedValue(r, onsightNum, elapsedMin);
+    const rv = routeExpectedValue(r, onsightNum, elapsedMin, timeMult);
     return { ...rv, route: r };
   }).filter(r => r.time !== Infinity && elapsedMin + r.time <= totalTime + 5)
     .sort((a, b) => b.evPerMin - a.evPerMin);
 
-  const simResult = optimizeStrategy(remaining, onsightGrade, totalTime - elapsedMin);
+  const simResult = optimizeStrategy(remaining, onsightGrade, totalTime - elapsedMin, timeMult);
   simResult.plan.forEach(p => { p.startMin += elapsedMin; });
 
   const actualPoints = climbLog.reduce((s, l) => {
@@ -255,6 +280,7 @@ function liveOptimize(routes, onsightGrade, climbLog, elapsedMin, totalTime) {
     actualPoints,
     projectedTotal: actualPoints + simResult.totalExpectedPoints,
     gradeOffset: offset,
+    timeMult,
     remaining: remaining.length,
     elapsedMin,
   };
@@ -267,5 +293,5 @@ window.Strategy = {
   buildRouteDistribution, climbTime, restTime,
   failProbability, performanceCurve, effectiveOnsight,
   routeExpectedValue, optimizeStrategy,
-  calibrateGradeOffset, applyCalibration, liveOptimize,
+  calibrateGradeOffset, applyCalibration, calibrateTimeMultiplier, liveOptimize,
 };

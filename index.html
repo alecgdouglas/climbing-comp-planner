@@ -510,6 +510,7 @@ function updateLiveView() {
     <div class="stat"><div class="val">${sentCount}</div><div class="lbl">Routes Sent</div></div>
     <div class="stat"><div class="val">${Math.round(live.projectedTotal).toLocaleString()}</div><div class="lbl">Projected Total</div></div>
     <div class="stat"><div class="val">${live.gradeOffset >= 0 ? '+' : ''}${live.gradeOffset.toFixed(1)}</div><div class="lbl">Grade Offset</div></div>
+    <div class="stat"><div class="val">${live.timeMult.toFixed(2)}x</div><div class="lbl">Time Factor</div></div>
     <div class="stat"><div class="val">${live.remaining}</div><div class="lbl">Routes Left</div></div>
   `;
 
