@@ -100,7 +100,14 @@
             <select id="logRouteNum"></select>
           </div>
           <div class="control-group">
-            <label for="logActualGrade">Felt Like (Grade)</label>
+            <label for="logType">Type</label>
+            <select id="logType" onchange="updateGradeDropdown()">
+              <option value="rope">Rope</option>
+              <option value="boulder">Boulder</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="logActualGrade">Felt Like</label>
             <select id="logActualGrade"></select>
           </div>
           <div class="control-group">
@@ -147,6 +154,13 @@
 <script>
 const S = window.Strategy;
 const grades = S.YDS_GRADES;
+const dg = (g) => g + '/' + S.V_GRADES[S.gradeToNum[g] || 0]; // dual grade display
+const dgn = (n) => S.numToDualGrade(n); // dual grade from numeric
+function dgAny(g) { // dual grade from either YDS or V input
+  if (S.gradeToNum[g] != null) return dg(g);
+  if (S.vGradeToNum[g] != null) return S.numToGrade(S.vGradeToNum[g]) + '/' + g;
+  return g;
+}
 
 // --- Build controls ---
 function makeSelect(id, label, options, defaultVal) {
@@ -212,10 +226,10 @@ function drawDistChart(routes) {
     scales: {
       ...chartOpts.scales,
       y: { ...chartOpts.scales.y, ticks: { ...chartOpts.scales.y.ticks,
-        callback: v => S.numToGrade(v) } }
+        callback: v => dgn(v) } }
     },
     plugins: { ...chartOpts.plugins, tooltip: { callbacks: {
-      label: ctx => S.numToGrade(ctx.raw) + ' (' + routes[ctx.dataIndex].points + ' pts)'
+      label: ctx => dgn(ctx.raw) + ' (' + routes[ctx.dataIndex].points + ' pts)'
     }}}
   });
 }
@@ -259,7 +273,7 @@ function drawFatigueChart(onsG) {
     scales: {
       x: { ...chartOpts.scales.x, ticks: { ...chartOpts.scales.x.ticks, maxTicksLimit: 12 } },
       y: { position: 'left', min: 0.5, max: 1.05, ticks: { color: '#888', callback: v => Math.round(v * 100) + '%' }, grid: { color: '#2a2d3a' } },
-      y1: { position: 'right', ticks: { color: '#888', callback: v => S.numToGrade(v) }, grid: { drawOnChartArea: false } },
+      y1: { position: 'right', ticks: { color: '#888', callback: v => dgn(v) }, grid: { drawOnChartArea: false } },
     }
   });
 }
@@ -295,7 +309,7 @@ function renderStrategy(result) {
           <td class="r">${Math.round(p.startMin)}</td>
           <td class="r">${phaseLabel(p.startMin)}</td>
           <td class="r">#${p.route.routeNum}</td>
-          <td class="r">${p.route.grade}</td>
+          <td class="r">${dg(p.route.grade)}</td>
           <td class="r">${p.route.points}</td>
           <td class="r">${Math.round(p.pSend * 100)}%</td>
           <td class="r">${p.evPerMin.toFixed(1)}</td>
@@ -426,6 +440,13 @@ function resetCompetition() {
   document.getElementById('btnResetComp').style.display = 'none';
 }
 
+function updateGradeDropdown() {
+  const sel = document.getElementById('logActualGrade');
+  const isBoulder = document.getElementById('logType').value === 'boulder';
+  const list = isBoulder ? S.V_GRADE_LIST : grades;
+  sel.innerHTML = list.map(g => `<option value="${g}">${g}</option>`).join('');
+}
+
 function activateLiveMode() {
   document.getElementById('liveSetup').style.display = 'none';
   document.getElementById('liveActive').style.display = '';
@@ -433,8 +454,7 @@ function activateLiveMode() {
   // Populate route # dropdown with remaining routes
   populateRouteSelect();
   // Populate grade dropdown
-  const gradeSelect = document.getElementById('logActualGrade');
-  gradeSelect.innerHTML = grades.map(g => `<option value="${g}">${g}</option>`).join('');
+  updateGradeDropdown();
 
   // Start timer
   if (timerInterval) clearInterval(timerInterval);
@@ -476,7 +496,7 @@ function populateRouteSelect() {
   const sel = document.getElementById('logRouteNum');
   sel.innerHTML = compState.routes
     .filter(r => !completedNums.has(r.routeNum))
-    .map(r => `<option value="${r.routeNum}">#${r.routeNum} (${r.grade} — ${r.points}pts)</option>`)
+    .map(r => `<option value="${r.routeNum}">#${r.routeNum} (${dg(r.grade)} — ${r.points}pts)</option>`)
     .join('');
 }
 
@@ -517,6 +537,8 @@ function resetRefreshTimer() {
 
 function prefillLog(routeNum, grade) {
   document.getElementById('logRouteNum').value = routeNum;
+  document.getElementById('logType').value = 'rope';
+  updateGradeDropdown();
   document.getElementById('logActualGrade').value = grade;
   document.getElementById('logForm').scrollIntoView({ behavior: 'smooth' });
 }
@@ -548,7 +570,7 @@ function updateLiveView() {
         <div class="rec-rank">${medal}</div>
         <div class="rec-info">
           <div class="rec-route">Route #${r.route.routeNum}</div>
-          <div class="rec-detail">${r.route.grade} · ${r.route.points} pts · ${Math.round(r.pSend * 100)}% send · ${r.evPerMin.toFixed(1)} EV/min</div>
+          <div class="rec-detail">${dg(r.route.grade)} · ${r.route.points} pts · ${Math.round(r.pSend * 100)}% send · ${r.evPerMin.toFixed(1)} EV/min</div>
         </div>
         <div class="rec-ev">${Math.round(r.ev)} exp pts</div>
       </div>`;
@@ -713,7 +735,7 @@ function renderTimelineChart(live) {
       },
       y: {
         position: 'left',
-        ticks: { color: '#888', callback: v => S.numToGrade(v) },
+        ticks: { color: '#888', callback: v => dgn(v) },
         grid: { color: '#2a2d3a' },
       },
       y1: {
@@ -747,8 +769,8 @@ function renderClimbLog() {
     row.innerHTML = `
       <td class="r">${Math.round(log.elapsedMin)}</td>
       <td class="r">#${log.routeNum}</td>
-      <td class="r">${route ? route.grade : '?'}</td>
-      <td class="r">${log.actualGrade}</td>
+      <td class="r">${route ? dg(route.grade) : '?'}</td>
+      <td class="r">${dgAny(log.actualGrade)}</td>
       <td class="r">${log.attempts}</td>
       <td>${log.sent ? '<span class="mi">check_circle</span>' : '<span class="mi">cancel</span>'}</td>
       <td class="r">${log.sent ? Math.round(pts) : '—'}</td>

@@ -14,6 +14,22 @@ const YDS_GRADES = [
 const gradeToNum = Object.fromEntries(YDS_GRADES.map((g, i) => [g, i]));
 const numToGrade = (n) => YDS_GRADES[Math.round(Math.max(0, Math.min(n, YDS_GRADES.length - 1)))];
 
+// --- V-Grade System ---
+const V_GRADES = ['VB','VB','VB','VB','VB','VB',
+  'V0','V1','V1','V2',
+  'V3','V3','V4','V5',
+  'V5','V6','V7','V7',
+  'V8','V9','V9','V10'];
+// V_GRADES[i] = V-grade corresponding to YDS_GRADES[i]
+
+const V_GRADE_LIST = ['VB','V0','V1','V2','V3','V4','V5','V6','V7','V8','V9','V10'];
+const vGradeToNum = {};
+V_GRADES.forEach((v, i) => { if (!(v in vGradeToNum)) vGradeToNum[v] = i; });
+// Map each V-grade to its first YDS index for reverse lookup
+
+function numToVGrade(n) { return V_GRADES[Math.round(Math.max(0, Math.min(n, V_GRADES.length - 1)))]; }
+function numToDualGrade(n) { return numToGrade(n) + '/' + numToVGrade(n); }
+
 // --- Default Parameters ---
 const DEFAULT_PARAMS = {
   numRoutes: 37,
@@ -212,7 +228,11 @@ function calibrateGradeOffset(routes, climbLog) {
   for (const log of climbLog) {
     const route = routes.find(r => r.routeNum === log.routeNum);
     if (!route || log.actualGrade == null) continue;
-    totalErr += gradeToNum[log.actualGrade] - route.gradeNum;
+    // Support both YDS and V-grade inputs
+    let actualNum = gradeToNum[log.actualGrade];
+    if (actualNum == null) actualNum = vGradeToNum[log.actualGrade];
+    if (actualNum == null) continue;
+    totalErr += actualNum - route.gradeNum;
     count++;
   }
   return count ? totalErr / count : 0;
@@ -289,6 +309,7 @@ function liveOptimize(routes, onsightGrade, climbLog, elapsedMin, totalTime) {
 // --- Exports ---
 window.Strategy = {
   YDS_GRADES, gradeToNum, numToGrade,
+  V_GRADES, V_GRADE_LIST, vGradeToNum, numToVGrade, numToDualGrade,
   DEFAULT_PARAMS, setParams, getParams, resetParams,
   buildRouteDistribution, climbTime, restTime,
   failProbability, performanceCurve, effectiveOnsight,
