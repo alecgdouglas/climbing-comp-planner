@@ -288,12 +288,12 @@ function renderStrategy(result) {
       <div class="stat"><div class="val">${Math.round(result.totalExpectedPoints / result.routesAttempted)}</div><div class="lbl">Avg Pts / Route</div></div>
     </div>
     <div class="table-wrap"><table>
-      <tr><th class="r">#</th><th class="r">Time (min)</th><th>Phase</th><th class="r">Route</th><th class="r">Grade</th><th class="r">Points</th><th class="r">Send %</th><th class="r">EV/min</th><th class="r">Exp. Pts</th></tr>
+      <tr><th class="r">#</th><th class="r">Time (min)</th><th class="r">Phase</th><th class="r">Route</th><th class="r">Grade</th><th class="r">Points</th><th class="r">Send %</th><th class="r">EV/min</th><th class="r">Exp. Pts</th></tr>
       ${result.plan.map((p, i) => `
         <tr class="${phaseClass(p.startMin)}">
           <td class="r">${i + 1}</td>
           <td class="r">${Math.round(p.startMin)}</td>
-          <td>${phaseLabel(p.startMin)}</td>
+          <td class="r">${phaseLabel(p.startMin)}</td>
           <td class="r">#${p.route.routeNum}</td>
           <td class="r">${p.route.grade}</td>
           <td class="r">${p.route.points}</td>
