@@ -543,6 +543,7 @@ function updateLiveView() {
 let timelineChart = null;
 function renderTimelineChart(live) {
   const log = compState.climbLog;
+  const P = S.getParams();
 
   // Actual climbs: bars at their logged time
   const actualBars = log.map(l => ({
@@ -562,30 +563,81 @@ function renderTimelineChart(live) {
     pSend: p.pSend,
   }));
 
+  // Cumulative score lines
+  const sorted = [...log].sort((a, b) => a.elapsedMin - b.elapsedMin);
+  const actualLine = [{ x: 0, y: 0 }];
+  let cumScore = 0;
+  for (const l of sorted) {
+    if (l.sent) {
+      const route = compState.routes.find(r => r.routeNum === l.routeNum);
+      if (route) cumScore += route.points * (1 - P.retryPenalty * Math.max(0, l.attempts - 1));
+    }
+    actualLine.push({ x: Math.round(l.elapsedMin), y: Math.round(cumScore) });
+  }
+
+  // Projected line continues from actual score
+  const projLine = [{ x: Math.round(getElapsedMin()), y: Math.round(cumScore) }];
+  let projCum = cumScore;
+  for (const p of live.fullPlan.plan) {
+    projCum += p.expectedPoints;
+    projLine.push({ x: Math.round(p.startMin + p.expectedTime), y: Math.round(projCum) });
+  }
+
   const data = {
     datasets: [
       {
         label: 'Completed',
+        type: 'bar',
         data: actualBars,
         backgroundColor: actualBars.map(b => b.sent ? '#5cb85c' : '#d9534f'),
         borderColor: actualBars.map(b => b.sent ? '#5cb85c' : '#d9534f'),
         borderWidth: 1,
         barPercentage: 0.9,
-        order: 1,
+        order: 3,
+        yAxisID: 'y',
       },
       {
         label: 'Projected',
+        type: 'bar',
         data: projBars,
         backgroundColor: 'rgba(74, 124, 255, 0.3)',
         borderColor: 'rgba(74, 124, 255, 0.6)',
         borderWidth: 1,
         borderDash: [4, 4],
         barPercentage: 0.9,
+        order: 4,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Actual Score',
+        type: 'line',
+        data: actualLine,
+        borderColor: '#f0ad4e',
+        backgroundColor: 'rgba(240, 173, 78, 0.1)',
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: false,
+        tension: 0.2,
+        order: 1,
+        yAxisID: 'y1',
+      },
+      {
+        label: 'Projected Score',
+        type: 'line',
+        data: projLine,
+        borderColor: 'rgba(240, 173, 78, 0.4)',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        fill: false,
+        tension: 0.2,
         order: 2,
+        yAxisID: 'y1',
       },
     ],
   };
 
+  const maxScore = Math.max(projCum, cumScore, 1000);
   const opts = {
     responsive: true,
     plugins: {
@@ -595,10 +647,13 @@ function renderTimelineChart(live) {
           title: ctx => ctx[0].raw.x + ' min',
           label: ctx => {
             const d = ctx.raw;
-            const prefix = ctx.datasetIndex === 0
-              ? `#${d.routeNum} — ${d.grade}` + (d.sent ? ' ✓' : ' ✗')
-              : `#${d.routeNum} — ${d.grade} (${Math.round(d.pSend * 100)}%)`;
-            return prefix;
+            const ds = ctx.datasetIndex;
+            if (ds <= 1) {
+              return ds === 0
+                ? `#${d.routeNum} — ${d.grade}` + (d.sent ? ' ✓' : ' ✗')
+                : `#${d.routeNum} — ${d.grade} (${Math.round(d.pSend * 100)}%)`;
+            }
+            return ctx.dataset.label + ': ' + d.y.toLocaleString() + ' pts';
           },
         },
       },
@@ -613,9 +668,18 @@ function renderTimelineChart(live) {
         grid: { color: '#2a2d3a' },
       },
       y: {
+        position: 'left',
         title: { display: true, text: 'Grade', color: '#888' },
         ticks: { color: '#888', callback: v => S.numToGrade(v) },
         grid: { color: '#2a2d3a' },
+      },
+      y1: {
+        position: 'right',
+        title: { display: true, text: 'Score', color: '#f0ad4e' },
+        min: 0,
+        max: Math.ceil(maxScore / 1000) * 1000,
+        ticks: { color: '#f0ad4e', callback: v => (v / 1000) + 'k' },
+        grid: { drawOnChartArea: false },
       },
     },
   };
