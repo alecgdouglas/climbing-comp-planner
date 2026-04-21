@@ -50,6 +50,13 @@ tr:hover td { background: #22253a; }
 .phase-fatigue { border-left: 3px solid #d9534f; }
 
 @media (max-width: 800px) { .charts { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  #chartTimeline { min-height: 280px; }
+  .projections-section { padding: 10px; }
+  .live-section { padding: 12px; }
+}
+table { width: 100%; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* Live Competition Mode */
 .live-section { background: #1a1d27; border-radius: 10px; padding: 20px; margin-top: 24px; border: 1px solid #2a2d3a; }

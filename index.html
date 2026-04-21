@@ -124,9 +124,9 @@
       <!-- Climb history -->
       <div class="climb-history">
         <h3>Climb Log</h3>
-        <table id="climbLogTable">
+        <div class="table-wrap"><table id="climbLogTable">
           <tr><th>Time</th><th>Route</th><th>Predicted</th><th>Felt Like</th><th>Attempts</th><th>Sent</th><th>Points</th><th></th></tr>
-        </table>
+        </table></div>
       </div>
 
       <!-- Recommendations & Timeline -->
@@ -137,7 +137,7 @@
           <div id="recCards"></div>
         </div>
 
-        <div class="chart-card" style="margin-top:16px;">
+        <div style="margin-top:16px;">
           <canvas id="chartTimeline"></canvas>
         </div>
       </div>
@@ -287,7 +287,7 @@ function renderStrategy(result) {
       <div class="stat"><div class="val">${Math.round(result.totalTime)} min</div><div class="lbl">Total Time</div></div>
       <div class="stat"><div class="val">${Math.round(result.totalExpectedPoints / result.routesAttempted)}</div><div class="lbl">Avg Pts / Route</div></div>
     </div>
-    <table>
+    <div class="table-wrap"><table>
       <tr><th>#</th><th>Time</th><th>Phase</th><th>Route</th><th>Grade</th><th>Points</th><th>Send %</th><th>EV/min</th><th>Exp. Pts</th></tr>
       ${result.plan.map((p, i) => `
         <tr class="${phaseClass(p.startMin)}">
@@ -302,7 +302,7 @@ function renderStrategy(result) {
           <td>${Math.round(p.expectedPoints)}</td>
         </tr>
       `).join('')}
-    </table>
+    </table></div>
   `;
 }
 
@@ -601,6 +601,10 @@ function renderTimelineChart(live) {
     projLine.push({ x: Math.round(p.startMin + p.expectedTime), y: Math.round(projCum) });
   }
 
+  const totalBars = actualBars.length + projBars.length;
+  const chartWidth = document.getElementById('chartTimeline').clientWidth || 400;
+  const barWidth = Math.max(4, Math.min(20, Math.floor(chartWidth / Math.max(totalBars, 1) * 0.6)));
+
   const data = {
     datasets: [
       {
@@ -611,8 +615,7 @@ function renderTimelineChart(live) {
         borderColor: actualBars.map(b => b.sent ? '#5cb85c' : '#d9534f'),
         borderWidth: 1,
         barPercentage: 0.9,
-        minBarLength: 24,
-        maxBarThickness: 40,
+        barThickness: barWidth,
         order: 3,
         yAxisID: 'y',
       },
@@ -625,8 +628,7 @@ function renderTimelineChart(live) {
         borderWidth: 1,
         borderDash: [4, 4],
         barPercentage: 0.9,
-        minBarLength: 24,
-        maxBarThickness: 40,
+        barThickness: barWidth,
         order: 4,
         yAxisID: 'y',
       },
@@ -662,6 +664,7 @@ function renderTimelineChart(live) {
   const maxScore = Math.max(projCum, cumScore, 1000);
   const opts = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: { labels: { color: '#aaa', font: { size: 11 } } },
       tooltip: {
@@ -683,7 +686,6 @@ function renderTimelineChart(live) {
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Minutes', color: '#888' },
         min: 0,
         max: Math.ceil(getTotalMin()),
         ticks: { color: '#888', stepSize: 15 },
@@ -691,13 +693,11 @@ function renderTimelineChart(live) {
       },
       y: {
         position: 'left',
-        title: { display: true, text: 'Grade', color: '#888' },
         ticks: { color: '#888', callback: v => S.numToGrade(v) },
         grid: { color: '#2a2d3a' },
       },
       y1: {
         position: 'right',
-        title: { display: true, text: 'Score', color: '#f0ad4e' },
         min: 0,
         max: Math.ceil(maxScore / 1000) * 1000,
         ticks: { color: '#f0ad4e', callback: v => (v / 1000) + 'k' },
