@@ -24,8 +24,12 @@ const V_GRADES = ['VB','VB','VB','VB','VB','VB',
 
 const V_GRADE_LIST = ['VB','V0','V1','V2','V3','V4','V5','V6','V7','V8','V9','V10'];
 const vGradeToNum = {};
-V_GRADES.forEach((v, i) => { if (!(v in vGradeToNum)) vGradeToNum[v] = i; });
-// Map each V-grade to its first YDS index for reverse lookup
+// Map each V-grade to the midpoint of its YDS index range
+const _vRanges = {};
+V_GRADES.forEach((v, i) => { if (!_vRanges[v]) _vRanges[v] = []; _vRanges[v].push(i); });
+Object.entries(_vRanges).forEach(([v, indices]) => {
+  vGradeToNum[v] = (indices[0] + indices[indices.length - 1]) / 2;
+});
 
 function numToVGrade(n) { return V_GRADES[Math.round(Math.max(0, Math.min(n, V_GRADES.length - 1)))]; }
 function numToDualGrade(n) { return numToGrade(n) + '/' + numToVGrade(n); }
