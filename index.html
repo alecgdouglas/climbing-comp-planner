@@ -20,7 +20,6 @@
       <fieldset>
         <legend>Competition</legend>
         <div class="adv-row"><label>Duration (min)</label><input type="number" id="p_compDuration" value="180" min="30" max="480"></div>
-        <div class="adv-row"><label># of Routes</label><input type="number" id="p_numRoutes" value="37" min="5" max="100"></div>
         <div class="adv-row"><label>Max Attempts</label><input type="number" id="p_maxAttempts" value="2" min="1" max="5"></div>
         <div class="adv-row"><label>Retry Penalty (%)</label><input type="number" id="p_retryPenalty" value="10" min="0" max="100" step="5"></div>
       </fieldset>
@@ -199,8 +198,6 @@ document.getElementById('numRoutesTop').addEventListener('input', function() {
   const n = parseInt(this.value) || 37;
   document.getElementById('lbl_maxGrade').textContent = `Max Grade (#${n})`;
   document.getElementById('lbl_centerGrade').textContent = `Center Grade (#${Math.ceil(n / 2)})`;
-  // Sync advanced panel
-  document.getElementById('p_numRoutes').value = n;
 });
 
 // --- Chart instances ---
@@ -350,7 +347,6 @@ runOptimizer();
 // --- Advanced Parameters ---
 const ADV_FIELDS = {
   compDuration: { el: 'p_compDuration', parse: Number },
-  numRoutes: { el: 'p_numRoutes', parse: Number },
   maxAttempts: { el: 'p_maxAttempts', parse: Number },
   retryPenalty: { el: 'p_retryPenalty', parse: v => Number(v) / 100 },
   climbTimeMin: { el: 'p_climbTimeMin', parse: Number },
