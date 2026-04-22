@@ -462,15 +462,14 @@ function resetCompetition() {
 
 function updateGradeDropdown() {
   const sel = document.getElementById('logActualGrade');
-  const prev = sel.value;
   const isBoulder = document.getElementById('logType').checked;
   const list = isBoulder ? S.V_GRADE_LIST : grades;
   sel.innerHTML = list.map(g => `<option value="${g}">${g}</option>`).join('');
-  // Convert previous selection to the new scale
-  if (prev) {
-    let num = S.gradeToNum[prev];
-    if (num == null) num = S.vGradeToNum[prev];
-    if (num != null) sel.value = isBoulder ? S.numToVGrade(num) : S.numToGrade(num);
+  // Set to the predicted grade for the selected route
+  const routeNum = parseInt(document.getElementById('logRouteNum').value);
+  if (compState && routeNum) {
+    const route = compState.routes.find(r => r.routeNum === routeNum);
+    if (route) sel.value = isBoulder ? S.numToVGrade(route.gradeNum) : route.grade;
   }
 }
 
