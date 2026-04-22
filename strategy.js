@@ -17,7 +17,7 @@ const numToGrade = (n) => YDS_GRADES[Math.round(Math.max(0, Math.min(n, YDS_GRAD
 // --- V-Grade System ---
 const V_GRADES = ['VB','VB','VB','VB','VB','VB',
   'V0','V1','V1','V2',
-  'V3','V3','V4','V5',
+  'V3','V4','V5','V5',
   'V5','V6','V7','V7',
   'V8','V9','V9','V10'];
 // V_GRADES[i] = V-grade corresponding to YDS_GRADES[i]
