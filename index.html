@@ -75,7 +75,7 @@
     <div class="live-setup" id="liveSetup">
       <div class="control-group">
         <label for="compEndTime">Competition End Time</label>
-        <input type="time" id="compEndTime" value="17:00">
+        <input type="time" id="compEndTime" value="21:00">
       </div>
       <button id="btnStartComp" onclick="startCompetition()">Start Competition</button>
       <button id="btnResumeComp" onclick="resumeCompetition()" style="display:none; background:#5cb85c;">Resume Saved Comp</button>
@@ -163,23 +163,45 @@ function dgAny(g) { // dual grade from either YDS or V input
 }
 
 // --- Build controls ---
+const dualOpts = grades.map(g => ({ value: g, label: dg(g) }));
 function makeSelect(id, label, options, defaultVal) {
   const g = document.createElement('div');
   g.className = 'control-group';
-  g.innerHTML = `<label for="${id}">${label}</label><select id="${id}">${
-    options.map(o => `<option value="${o}"${o === defaultVal ? ' selected' : ''}>${o}</option>`).join('')
+  const isObj = options[0] && options[0].value != null;
+  g.innerHTML = `<label for="${id}" id="lbl_${id}">${label}</label><select id="${id}">${
+    options.map(o => {
+      const val = isObj ? o.value : o;
+      const txt = isObj ? o.label : o;
+      return `<option value="${val}"${val === defaultVal ? ' selected' : ''}>${txt}</option>`;
+    }).join('')
   }</select>`;
   return g;
 }
+function makeNumber(id, label, value, min, max) {
+  const g = document.createElement('div');
+  g.className = 'control-group';
+  g.innerHTML = `<label for="${id}" id="lbl_${id}">${label}</label><input type="number" id="${id}" value="${value}" min="${min}" max="${max}" style="width:70px">`;
+  return g;
+}
 const ctrl = document.getElementById('controls');
-ctrl.appendChild(makeSelect('minGrade', 'Min Grade (Route #1)', grades, '5.9'));
-ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (Route #37)', grades, '5.13d'));
-ctrl.appendChild(makeSelect('centerGrade', 'Center Grade (#19)', grades, '5.11c'));
-ctrl.appendChild(makeSelect('onsightGrade', 'Your Onsight Max', grades, '5.11d'));
+ctrl.appendChild(makeSelect('minGrade', 'Min Grade (#1)', dualOpts, '5.9'));
+ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (#37)', dualOpts, '5.13d'));
+ctrl.appendChild(makeNumber('numRoutesTop', '# Routes', 37, 5, 100));
+ctrl.appendChild(makeSelect('centerGrade', 'Center Grade (#19)', dualOpts, '5.11c'));
+ctrl.appendChild(makeSelect('onsightGrade', 'Your Onsight Max', dualOpts, '5.11d'));
 const btn = document.createElement('button');
 btn.textContent = 'Optimize';
 btn.onclick = runOptimizer;
 ctrl.appendChild(btn);
+
+// Update labels when # routes changes
+document.getElementById('numRoutesTop').addEventListener('input', function() {
+  const n = parseInt(this.value) || 37;
+  document.getElementById('lbl_maxGrade').textContent = `Max Grade (#${n})`;
+  document.getElementById('lbl_centerGrade').textContent = `Center Grade (#${Math.ceil(n / 2)})`;
+  // Sync advanced panel
+  document.getElementById('p_numRoutes').value = n;
+});
 
 // --- Chart instances ---
 const chartOpts = { responsive: true, plugins: { legend: { labels: { color: '#aaa', font: { size: 11 } } } },
@@ -200,8 +222,10 @@ function runOptimizer() {
   const maxG = document.getElementById('maxGrade').value;
   const cenG = document.getElementById('centerGrade').value;
   const onsG = document.getElementById('onsightGrade').value;
+  const numR = parseInt(document.getElementById('numRoutesTop').value) || 37;
+  S.setParams({ ...S.getParams(), numRoutes: numR });
 
-  const routes = S.buildRouteDistribution(minG, maxG, cenG);
+  const routes = S.buildRouteDistribution(minG, maxG, cenG, numR);
   const result = S.optimizeStrategy(routes, onsG);
 
   drawDistChart(routes);
@@ -609,7 +633,7 @@ function renderTimelineChart(live) {
     x: Math.round(l.elapsedMin),
     y: S.gradeToNum[l.actualGrade],
     routeNum: l.routeNum,
-    grade: l.actualGrade,
+    grade: dgAny(l.actualGrade),
     sent: l.sent,
   }));
 
@@ -618,7 +642,7 @@ function renderTimelineChart(live) {
     x: Math.round(p.startMin),
     y: p.route.gradeNum,
     routeNum: p.route.routeNum,
-    grade: p.route.grade,
+    grade: dg(p.route.grade),
     pSend: p.pSend,
   }));
 
