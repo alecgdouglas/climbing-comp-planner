@@ -180,13 +180,13 @@ function makeSelect(id, label, options, defaultVal) {
 function makeNumber(id, label, value, min, max) {
   const g = document.createElement('div');
   g.className = 'control-group';
-  g.innerHTML = `<label for="${id}" id="lbl_${id}">${label}</label><input type="number" id="${id}" value="${value}" min="${min}" max="${max}" style="width:70px">`;
+  g.innerHTML = `<label for="${id}" id="lbl_${id}">${label}</label><input type="number" id="${id}" value="${value}" min="${min}" max="${max}">`;
   return g;
 }
 const ctrl = document.getElementById('controls');
+ctrl.appendChild(makeNumber('numRoutesTop', '# of Routes', 37, 5, 100));
 ctrl.appendChild(makeSelect('minGrade', 'Min Grade (#1)', dualOpts, '5.9'));
 ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (#37)', dualOpts, '5.13d'));
-ctrl.appendChild(makeNumber('numRoutesTop', '# Routes', 37, 5, 100));
 ctrl.appendChild(makeSelect('centerGrade', 'Center Grade (#19)', dualOpts, '5.11c'));
 ctrl.appendChild(makeSelect('onsightGrade', 'Your Onsight Max', dualOpts, '5.11d'));
 const btn = document.createElement('button');
