@@ -212,7 +212,7 @@ function makeChart(id, type, data, opts = {}) {
 
 // --- Run ---
 function runOptimizer() {
-  applyAdvanced();
+  if (typeof ADV_FIELDS !== 'undefined') applyAdvanced();
   const minG = document.getElementById('minGrade').value;
   const maxG = document.getElementById('maxGrade').value;
   const cenG = document.getElementById('centerGrade').value;
