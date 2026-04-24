@@ -181,6 +181,43 @@ function routeExpectedValue(route, onsightGradeNum, minute, timeMult) {
   };
 }
 
+// Reorder plan: ascending grades to peak, descending after
+function reorderPlan(plan, onsightNum, timeMult) {
+  if (plan.length < 2) return plan;
+  const { peakEnd } = PARAMS;
+
+  // Split into pre-peak and post-peak based on original start times
+  const prePeak = [], postPeak = [];
+  for (const p of plan) {
+    if (p.startMin < peakEnd) prePeak.push(p.route);
+    else postPeak.push(p.route);
+  }
+
+  // Sort pre-peak ascending by grade, post-peak descending
+  prePeak.sort((a, b) => a.gradeNum - b.gradeNum);
+  postPeak.sort((a, b) => b.gradeNum - a.gradeNum);
+
+  // Rebuild plan with recalculated times
+  const ordered = [...prePeak, ...postPeak];
+  const newPlan = [];
+  let currentTime = 0;
+  for (const route of ordered) {
+    const rv = routeExpectedValue(route, onsightNum, currentTime, timeMult);
+    newPlan.push({
+      startMin: currentTime,
+      route,
+      expectedPoints: rv.ev,
+      expectedTime: rv.time,
+      evPerMin: rv.evPerMin,
+      pSend: rv.pSend,
+      pSend1: rv.pSend1,
+      effectiveGrade: numToGrade(effectiveOnsight(onsightNum, currentTime)),
+    });
+    currentTime += rv.time;
+  }
+  return newPlan;
+}
+
 // --- Greedy Optimizer ---
 function optimizeStrategy(routes, onsightGrade, totalTime, timeMult) {
   totalTime = totalTime || PARAMS.compDuration;
@@ -219,7 +256,7 @@ function optimizeStrategy(routes, onsightGrade, totalTime, timeMult) {
   }
 
   return {
-    plan,
+    plan: reorderPlan(plan, onsightNum, timeMult),
     totalExpectedPoints: plan.reduce((s, p) => s + p.expectedPoints, 0),
     totalTime: currentTime,
     routesAttempted: plan.length,
