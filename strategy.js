@@ -144,7 +144,9 @@ function performanceCurve(minute) {
 
 function effectiveOnsight(baseOnsightNum, minute) {
   const perf = performanceCurve(minute);
-  return baseOnsightNum - (1 - perf) * (PARAMS.perfToGradeRange * 1.0);
+  // Scale penalty to climber's ability — stronger climbers have more range to lose
+  const maxDrop = baseOnsightNum * (PARAMS.perfToGradeRange / YDS_GRADES.length);
+  return baseOnsightNum - (1 - perf) * maxDrop;
 }
 
 // --- Expected Value Calculation ---
