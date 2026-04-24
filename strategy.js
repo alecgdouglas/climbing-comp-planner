@@ -124,7 +124,7 @@ function restTime(gradeNum) {
 function failProbability(gradeNum, onsightGradeNum) {
   const midpoint = onsightGradeNum + PARAMS.failSigmoidOffset;
   const raw = 1 / (1 + Math.exp(-PARAMS.failSigmoidK * (gradeNum - midpoint)));
-  return Math.min(0.99, Math.max(0, raw));
+  return Math.max(0, raw);
 }
 
 // --- Fatigue / Performance Curve ---
@@ -161,7 +161,7 @@ function routeExpectedValue(route, onsightGradeNum, minute, timeMult) {
   const pSend2 = (1 - pSend1) * (1 - pFail2);
 
   const pSendTotal = pSend1 + pSend2;
-  if (pSendTotal < 0.01) return { ev: 0, time: Infinity, pSend: 0, attempts: 0 };
+  if (pSendTotal < 0.001) return { ev: 0, time: Infinity, pSend: 0, attempts: 0 };
 
   const penalty = PARAMS.retryPenalty;
   const expectedPoints = route.points * (pSend1 * 1.0 + pSend2 * (1 - penalty));
