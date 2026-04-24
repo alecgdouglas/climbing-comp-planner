@@ -56,7 +56,7 @@
   </details>
 
   <div class="charts">
-    <div class="chart-card"><h3>Route Distribution</h3><canvas id="chartDist"></canvas></div>
+    <div class="chart-card"><h3>Route Distribution <div class="grade-toggle" style="display:inline-block;vertical-align:middle;margin-left:8px;width:80px;height:22px"><input type="checkbox" id="distToggle" onchange="redrawDist()"><label for="distToggle"><div class="gt-switch" data-unchecked="Route" data-checked="Grade" style="font-size:0.65rem"></div></label></div></h3><canvas id="chartDist"></canvas></div>
     <div class="chart-card"><h3>Time &amp; Rest Model</h3><canvas id="chartTime"></canvas></div>
     <div class="chart-card"><h3>Failure Probability</h3><canvas id="chartFail"></canvas></div>
     <div class="chart-card"><h3>Performance / Fatigue Curve</h3><canvas id="chartFatigue"></canvas></div>
@@ -229,27 +229,36 @@ function runOptimizer() {
   renderStrategy(result);
 }
 
+let lastRoutes = [];
+function redrawDist() { drawDistChart(lastRoutes); }
+
 function drawDistChart(routes) {
-  makeChart('chartDist', 'bar', {
-    labels: routes.map(r => '#' + r.routeNum),
-    datasets: [{
-      label: 'Grade',
-      data: routes.map(r => r.gradeNum),
-      backgroundColor: routes.map(r => {
-        const n = r.gradeNum / (grades.length - 1);
-        return `hsl(${(1 - n) * 120}, 70%, 50%)`;
-      }),
-    }]
-  }, {
-    scales: {
-      ...chartOpts.scales,
-      y: { ...chartOpts.scales.y, ticks: { ...chartOpts.scales.y.ticks,
-        callback: v => dgn(v) } }
-    },
-    plugins: { ...chartOpts.plugins, tooltip: { callbacks: {
-      label: ctx => dgn(ctx.raw) + ' (' + routes[ctx.dataIndex].points + ' pts)'
-    }}}
-  });
+  lastRoutes = routes;
+  const histogram = document.getElementById('distToggle').checked;
+  if (histogram) {
+    const counts = {};
+    routes.forEach(r => { counts[r.grade] = (counts[r.grade] || 0) + 1; });
+    const used = grades.filter(g => counts[g]);
+    makeChart('chartDist', 'bar', {
+      labels: used.map(g => dg(g)),
+      datasets: [{ label: 'Routes', data: used.map(g => counts[g]),
+        backgroundColor: used.map(g => { const n = S.gradeToNum[g] / (grades.length - 1); return `hsl(${(1 - n) * 120}, 70%, 50%)`; }),
+      }]
+    }, {
+      scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, ticks: { ...chartOpts.scales.y.ticks, stepSize: 1 } } },
+      plugins: { ...chartOpts.plugins, tooltip: { callbacks: { label: ctx => ctx.raw + ' route' + (ctx.raw > 1 ? 's' : '') } } }
+    });
+  } else {
+    makeChart('chartDist', 'bar', {
+      labels: routes.map(r => '#' + r.routeNum),
+      datasets: [{ label: 'Grade', data: routes.map(r => r.gradeNum),
+        backgroundColor: routes.map(r => { const n = r.gradeNum / (grades.length - 1); return `hsl(${(1 - n) * 120}, 70%, 50%)`; }),
+      }]
+    }, {
+      scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, ticks: { ...chartOpts.scales.y.ticks, callback: v => dgn(v) } } },
+      plugins: { ...chartOpts.plugins, tooltip: { callbacks: { label: ctx => dgn(ctx.raw) + ' (' + routes[ctx.dataIndex].points + ' pts)' } } }
+    });
+  }
 }
 
 function drawTimeChart() {
