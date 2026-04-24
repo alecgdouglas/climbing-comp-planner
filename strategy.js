@@ -122,10 +122,9 @@ function restTime(gradeNum) {
 
 // --- Failure Probability ---
 function failProbability(gradeNum, onsightGradeNum) {
-  if (gradeNum > onsightGradeNum + PARAMS.failCeiling) return 0.98;
   const midpoint = onsightGradeNum + PARAMS.failSigmoidOffset;
   const raw = 1 / (1 + Math.exp(-PARAMS.failSigmoidK * (gradeNum - midpoint)));
-  return Math.min(1, Math.max(0, raw));
+  return Math.min(0.99, Math.max(0, raw));
 }
 
 // --- Fatigue / Performance Curve ---
