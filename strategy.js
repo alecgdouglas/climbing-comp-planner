@@ -36,7 +36,7 @@ function numToDualGrade(n) { return numToGrade(n) + '/' + numToVGrade(n); }
 
 // --- Default Parameters ---
 const DEFAULT_PARAMS = {
-  numRoutes: 37,
+  numRoutes: 40,
   compDuration: 180,       // minutes
   maxAttempts: 2,
   retryPenalty: 0.10,      // 10% point loss per extra attempt

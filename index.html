@@ -180,9 +180,9 @@ function makeNumber(id, label, value, min, max) {
   return g;
 }
 const ctrl = document.getElementById('controls');
-ctrl.appendChild(makeNumber('numRoutesTop', '# of Routes', 37, 5, 100));
+ctrl.appendChild(makeNumber('numRoutesTop', '# of Routes', 40, 5, 100));
 ctrl.appendChild(makeSelect('minGrade', 'Min Grade (#1)', dualOpts, '5.9'));
-ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (#37)', dualOpts, '5.13d'));
+ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (#40)', dualOpts, '5.13d'));
 ctrl.appendChild(makeSelect('centerGrade', 'Center Grade (#19)', dualOpts, '5.11b'));
 ctrl.appendChild(makeSelect('onsightGrade', 'Your Onsight Max', dualOpts, '5.11d'));
 const btn = document.createElement('button');
@@ -192,7 +192,7 @@ ctrl.appendChild(btn);
 
 // Update labels when # routes changes
 document.getElementById('numRoutesTop').addEventListener('input', function() {
-  const n = parseInt(this.value) || 37;
+  const n = parseInt(this.value) || 40;
   document.getElementById('lbl_maxGrade').textContent = `Max Grade (#${n})`;
   document.getElementById('lbl_centerGrade').textContent = `Center Grade (#${Math.ceil(n / 2)})`;
 });
@@ -218,7 +218,7 @@ function runOptimizer() {
   let maxG = document.getElementById('maxGrade').value;
   let cenG = document.getElementById('centerGrade').value;
   const onsG = document.getElementById('onsightGrade').value;
-  const numR = parseInt(document.getElementById('numRoutesTop').value) || 37;
+  const numR = parseInt(document.getElementById('numRoutesTop').value) || 40;
 
   // Validate: swap min/max if inverted, clamp center
   if (S.gradeToNum[minG] > S.gradeToNum[maxG]) {
