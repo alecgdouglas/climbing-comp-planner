@@ -214,11 +214,24 @@ function makeChart(id, type, data, opts = {}) {
 var advReady = false;
 function runOptimizer() {
   if (advReady) applyAdvanced();
-  const minG = document.getElementById('minGrade').value;
-  const maxG = document.getElementById('maxGrade').value;
-  const cenG = document.getElementById('centerGrade').value;
+  let minG = document.getElementById('minGrade').value;
+  let maxG = document.getElementById('maxGrade').value;
+  let cenG = document.getElementById('centerGrade').value;
   const onsG = document.getElementById('onsightGrade').value;
   const numR = parseInt(document.getElementById('numRoutesTop').value) || 37;
+
+  // Validate: swap min/max if inverted, clamp center
+  if (S.gradeToNum[minG] > S.gradeToNum[maxG]) {
+    [minG, maxG] = [maxG, minG];
+    document.getElementById('minGrade').value = minG;
+    document.getElementById('maxGrade').value = maxG;
+  }
+  if (S.gradeToNum[cenG] < S.gradeToNum[minG]) {
+    cenG = minG; document.getElementById('centerGrade').value = cenG;
+  } else if (S.gradeToNum[cenG] > S.gradeToNum[maxG]) {
+    cenG = maxG; document.getElementById('centerGrade').value = cenG;
+  }
+
   S.setParams({ ...S.getParams(), numRoutes: numR });
 
   const routes = S.buildRouteDistribution(minG, maxG, cenG, numR);
