@@ -111,10 +111,7 @@
           </div>
           <div class="control-group">
             <label for="logAttempts">Attempts</label>
-            <select id="logAttempts">
-              <option value="1">1 (onsight)</option>
-              <option value="2">2</option>
-            </select>
+            <select id="logAttempts"></select>
           </div>
           <div class="control-group">
             <label for="logSent">Sent?</label>
@@ -481,6 +478,15 @@ function activateLiveMode() {
   populateRouteSelect();
   // Populate grade dropdown
   updateGradeDropdown();
+  // Populate attempts dropdown based on penalty
+  const P = S.getParams();
+  const maxAttempts = P.retryPenalty > 0 ? Math.ceil(1 / P.retryPenalty) + 1 : 10;
+  const attSel = document.getElementById('logAttempts');
+  attSel.innerHTML = Array.from({ length: maxAttempts }, (_, i) => {
+    const n = i + 1;
+    const label = n === 1 ? '1 (onsight)' : n === maxAttempts ? n + '+' : String(n);
+    return `<option value="${n}">${label}</option>`;
+  }).join('');
 
   // Start timer
   if (timerInterval) clearInterval(timerInterval);
