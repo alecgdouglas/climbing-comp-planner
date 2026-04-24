@@ -54,7 +54,7 @@ const DEFAULT_PARAMS = {
   fatigueDecay: 0.003,     // exponential decay rate after peak
   perfToGradeRange: 10,    // how many grade steps a full perf swing covers
   // Fail probability
-  failSigmoidK: 1.8,       // steepness of fail curve
+  failSigmoidK: 0.9,       // steepness of fail curve
   failSigmoidOffset: 0.5,  // midpoint offset above onsight grade
   failCeiling: 1.5,        // grades above onsight = 100% fail
   retryBenefitThreshold: 2, // grade gap below which retry helps
