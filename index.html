@@ -50,7 +50,7 @@
       </fieldset>
     </div>
     <div style="padding: 0 16px; display:flex; gap:8px;">
-      <button onclick="applyAdvanced()">Apply</button>
+      <button onclick="runOptimizer()">Apply</button>
       <button onclick="resetAdvanced()" style="background:#666;">Reset Defaults</button>
     </div>
   </details>
@@ -212,6 +212,7 @@ function makeChart(id, type, data, opts = {}) {
 
 // --- Run ---
 function runOptimizer() {
+  applyAdvanced();
   const minG = document.getElementById('minGrade').value;
   const maxG = document.getElementById('maxGrade').value;
   const cenG = document.getElementById('centerGrade').value;
@@ -379,7 +380,6 @@ function applyAdvanced() {
     overrides[key] = cfg.parse(document.getElementById(cfg.el).value);
   }
   S.setParams(overrides);
-  runOptimizer();
 }
 
 function resetAdvanced() {
