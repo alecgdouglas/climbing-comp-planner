@@ -211,8 +211,9 @@ function makeChart(id, type, data, opts = {}) {
 }
 
 // --- Run ---
+var advReady = false;
 function runOptimizer() {
-  if (typeof ADV_FIELDS !== 'undefined') applyAdvanced();
+  if (advReady) applyAdvanced();
   const minG = document.getElementById('minGrade').value;
   const maxG = document.getElementById('maxGrade').value;
   const cenG = document.getElementById('centerGrade').value;
@@ -373,6 +374,7 @@ const ADV_FIELDS = {
   retryBenefitThreshold: { el: 'p_retryBenefitThreshold', parse: Number },
   retryFailReduction: { el: 'p_retryFailReduction', parse: Number },
 };
+advReady = true;
 
 function applyAdvanced() {
   const overrides = {};
