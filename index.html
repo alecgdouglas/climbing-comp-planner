@@ -181,6 +181,7 @@ function makeNumber(id, label, value, min, max) {
 }
 const ctrl = document.getElementById('controls');
 ctrl.appendChild(makeNumber('numRoutesTop', '# of Routes', 40, 5, 100));
+ctrl.appendChild(makeNumber('routesCountedTop', 'Routes Counted', 10, 0, 100));
 ctrl.appendChild(makeSelect('minGrade', 'Min Grade (#1)', dualOpts, '5.9'));
 ctrl.appendChild(makeSelect('maxGrade', 'Max Grade (#40)', dualOpts, '5.13d'));
 ctrl.appendChild(makeSelect('centerGrade', 'Center Grade (#19)', dualOpts, '5.11b'));
@@ -219,6 +220,7 @@ function runOptimizer() {
   let cenG = document.getElementById('centerGrade').value;
   const onsG = document.getElementById('onsightGrade').value;
   const numR = parseInt(document.getElementById('numRoutesTop').value) || 40;
+  const rc = parseInt(document.getElementById('routesCountedTop').value) || 0;
 
   // Validate: swap min/max if inverted, clamp center
   if (S.gradeToNum[minG] > S.gradeToNum[maxG]) {
@@ -232,7 +234,7 @@ function runOptimizer() {
     cenG = maxG; document.getElementById('centerGrade').value = cenG;
   }
 
-  S.setParams({ ...S.getParams(), numRoutes: numR });
+  S.setParams({ ...S.getParams(), numRoutes: numR, routesCounted: rc });
 
   const routes = S.buildRouteDistribution(minG, maxG, cenG, numR);
   const result = S.optimizeStrategy(routes, onsG);

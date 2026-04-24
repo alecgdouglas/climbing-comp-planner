@@ -1,18 +1,19 @@
 # Climbing Competition Planner
 
-A strategy optimizer for **time-limited, open-format climbing competitions** — the kind where all routes are open simultaneously, competitors choose what to attempt and in what order, and points are awarded based on route number (higher number = harder route = more points).
+A strategy optimizer for **Classic Redpoint** style climbing competitions — the kind where all routes are open simultaneously, competitors choose what to attempt and in what order, and only your top N scores count.
 
 ## Competition Format
 
 This tool is built for a specific comp format:
-- **Fixed time window** (e.g. 3 hours) to climb as many routes as possible
+- **Classic Redpoint** scoring — fixed time window, open format, all routes available
 - **Numbered routes** with increasing difficulty — route #1 is easiest, route #N is hardest
-- **Points = route number × 100** (route #1 = 100 pts, route #37 = 3,700 pts)
+- **Points = route number × 100** (route #1 = 100 pts, route #40 = 4,000 pts)
+- **Top N scores count** (e.g. your best 10 sends) — not every send matters, just your highest-scoring ones
 - **Routes can be toprope, lead, or bouldering** — all mixed together
-- **Limited attempts** per route with a point penalty for retries
+- **Point penalty per retry attempt** (e.g. 10% per extra attempt)
 - Competitors choose their own order and strategy
 
-If your comp uses a different format (IFSC-style isolation, redpoint scoring, etc.), this tool probably isn't what you need.
+If your comp uses a different format (IFSC-style isolation, onsight-only scoring, etc.), this tool probably isn't what you need.
 
 ## Features
 

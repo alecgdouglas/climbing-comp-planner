@@ -37,6 +37,7 @@ function numToDualGrade(n) { return numToGrade(n) + '/' + numToVGrade(n); }
 // --- Default Parameters ---
 const DEFAULT_PARAMS = {
   numRoutes: 40,
+  routesCounted: 10,         // 0 = unlimited, N = only top N sends count
   compDuration: 180,       // minutes
   maxAttempts: 2,
   retryPenalty: 0.10,      // 10% point loss per extra attempt
@@ -223,19 +224,32 @@ function optimizeStrategy(routes, onsightGrade, totalTime, timeMult) {
   totalTime = totalTime || PARAMS.compDuration;
   timeMult = timeMult || 1.0;
   const onsightNum = gradeToNum[onsightGrade];
+  const rc = PARAMS.routesCounted;
   const remaining = routes.map(r => ({ ...r }));
   const plan = [];
+  const countedPoints = []; // sorted desc, tracks top-N expected points
   let currentTime = 0;
 
   while (currentTime < totalTime && remaining.length > 0) {
     let best = null;
     let bestIdx = -1;
+    const threshold = (rc > 0 && countedPoints.length >= rc) ? countedPoints[rc - 1] : 0;
+
     for (let i = 0; i < remaining.length; i++) {
       const rv = routeExpectedValue(remaining[i], onsightNum, currentTime, timeMult);
       if (rv.time === Infinity) continue;
       if (currentTime + rv.time > totalTime + 5) continue;
-      if (!best || rv.evPerMin > best.evPerMin) {
-        best = { ...rv, route: remaining[i] };
+
+      // Displacement value: how much this route improves the top-N total
+      let effectiveEv = rv.ev;
+      if (rc > 0 && countedPoints.length >= rc) {
+        effectiveEv = Math.max(0, rv.ev - threshold);
+        if (effectiveEv <= 0) continue; // wouldn't displace anything
+      }
+      const effectiveEvPerMin = effectiveEv / rv.time;
+
+      if (!best || effectiveEvPerMin > best.effectiveEvPerMin) {
+        best = { ...rv, route: remaining[i], effectiveEvPerMin };
         bestIdx = i;
       }
     }
@@ -251,13 +265,19 @@ function optimizeStrategy(routes, onsightGrade, totalTime, timeMult) {
       pSend1: best.pSend1,
       effectiveGrade: numToGrade(effectiveOnsight(onsightNum, currentTime)),
     });
+    // Update counted points (sorted desc)
+    countedPoints.push(best.ev);
+    countedPoints.sort((a, b) => b - a);
+
     currentTime += best.time;
     remaining.splice(bestIdx, 1);
   }
 
+  // Total = sum of top N (or all if unlimited)
+  const counted = rc > 0 ? countedPoints.slice(0, rc) : countedPoints;
   return {
     plan: reorderPlan(plan, onsightNum, timeMult),
-    totalExpectedPoints: plan.reduce((s, p) => s + p.expectedPoints, 0),
+    totalExpectedPoints: counted.reduce((s, p) => s + p, 0),
     totalTime: currentTime,
     routesAttempted: plan.length,
   };
@@ -329,18 +349,30 @@ function liveOptimize(routes, onsightGrade, climbLog, elapsedMin, totalTime) {
   const simResult = optimizeStrategy(remaining, onsightGrade, totalTime - elapsedMin, timeMult);
   simResult.plan.forEach(p => { p.startMin += elapsedMin; });
 
-  const actualPoints = climbLog.reduce((s, l) => {
-    if (!l.sent) return s;
+  // Calculate actual points per send
+  const actualSendPoints = climbLog.filter(l => l.sent).map(l => {
     const route = routes.find(r => r.routeNum === l.routeNum);
-    const pen = 1 - PARAMS.retryPenalty * Math.max(0, l.attempts - 1);
-    return s + (route ? route.points * Math.max(0, pen) : 0);
-  }, 0);
+    if (!route) return 0;
+    return route.points * Math.max(0, 1 - PARAMS.retryPenalty * Math.max(0, l.attempts - 1));
+  });
+
+  const rc = PARAMS.routesCounted;
+  // Top-N actual points
+  const sortedActual = [...actualSendPoints].sort((a, b) => b - a);
+  const countedActual = rc > 0 ? sortedActual.slice(0, rc) : sortedActual;
+  const actualPoints = countedActual.reduce((s, p) => s + p, 0);
+
+  // Projected total: top-N from combined actual sends + projected sends
+  const projectedSendPoints = simResult.plan.map(p => p.expectedPoints);
+  const allPoints = [...actualSendPoints, ...projectedSendPoints].sort((a, b) => b - a);
+  const countedAll = rc > 0 ? allPoints.slice(0, rc) : allPoints;
+  const projectedTotal = countedAll.reduce((s, p) => s + p, 0);
 
   return {
     recommendations: scored.slice(0, 3),
     fullPlan: simResult,
     actualPoints,
-    projectedTotal: actualPoints + simResult.totalExpectedPoints,
+    projectedTotal,
     gradeOffset: offset,
     timeMult,
     remaining: remaining.length,
